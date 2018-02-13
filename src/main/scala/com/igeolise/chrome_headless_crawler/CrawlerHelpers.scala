@@ -13,8 +13,9 @@ import io.webfolder.cdp.event.network.LoadingFinished
 import io.webfolder.cdp.event.page.LifecycleEvent
 import io.webfolder.cdp.listener.EventListener
 import io.webfolder.cdp.session.{Session, SessionFactory}
-import scala.collection.JavaConversions._
 
+import scala.collection.JavaConversions._
+import scala.concurrent.{Await, Promise}
 import scala.util.Try
 
 trait CrawlerHelpers {
@@ -66,25 +67,25 @@ trait CrawlerHelpers {
     } yield id
 
   protected def waitForPage(action: (Session) => Unit, timeout: Int) (session: Session): Try[Unit] = {
-    var loadingFinished = false
-    var networkIdle = false
+    import  scala.concurrent.duration._
+
+    val promise = Promise[Unit]()
+
+
     val listener = new EventListener[AnyRef] {
       override def onEvent(event: Events, value: scala.AnyRef): Unit = {
         value match {
-          case e: LoadingFinished => loadingFinished = true
-          case e: LifecycleEvent if e.getName == "networkIdle" => networkIdle = true
+          case e: LoadingFinished => promise.success(())
+          case e: LifecycleEvent if e.getName == "networkIdle" => promise.success(())
           case _ =>
         }
       }
     }
+
     trySessionWithFailureMessage("Waiting for document to be ready", session) { ses =>
       ses.addEventListener(listener)
       action(ses)
-      val predicate = new Predicate[Session] {
-        override def test(t: Session): Boolean = loadingFinished || networkIdle
-      }
-      ses.waitUntil(predicate, timeout)
-      // sometimes it solves some dom resolving issues
+      Await.ready(promise.future, atMost = timeout.seconds)
       ses.wait(100)
       ses.waitDocumentReady()
       ses.removeEventEventListener(listener)

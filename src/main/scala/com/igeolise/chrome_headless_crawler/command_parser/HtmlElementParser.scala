@@ -1,13 +1,13 @@
 package crawler.command_parser
 
 object HtmlElementParser {
-  private val regex = "(\\w+)(?> having (.+))?".r
-  private val twoStringRegex = "(\\w+) (.+)".r
+  private val elemWithDiscriminator = "(\\w+)(?> having (.+))?".r
+  private val customElem = "(\\w+) (.+)".r
   private val discriminatorParser = new MapOptionUnapply[String, Discriminator](DiscriminatorParser.unapply)
   def unapply(command: String): Option[HtmlElement] = {
 
     command match {
-      case regex(name, NullToOption(discriminatorParser(discriminator))) =>
+      case elemWithDiscriminator(name, NullToOption(discriminatorParser(discriminator))) =>
         name match {
           case "form" => Some(Form(discriminator))
           case "input" => Some(Input(discriminator))
@@ -21,7 +21,7 @@ object HtmlElementParser {
           case "paragraph" => Some(Paragraph(discriminator))
           case _ => None
         }
-      case twoStringRegex("customSelector", value) => Some(CustomSelector(value))
+      case customElem("customSelector", value) => Some(CustomSelector(value))
       case _ => None
     }
   }
