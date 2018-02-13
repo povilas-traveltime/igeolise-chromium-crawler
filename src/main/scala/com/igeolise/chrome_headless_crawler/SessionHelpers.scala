@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.Base64
 
-import crawler.command_parser.{CustomSelector, HtmlElement}
+import crawler.command_parser.Credentials
 import io.webfolder.cdp.`type`.constant.DownloadBehavior
 import io.webfolder.cdp.command.DOM
 import io.webfolder.cdp.event.Events
@@ -38,40 +38,29 @@ object SessionHelpers {
         page.setDownloadBehavior(DownloadBehavior.Allow, target.getAbsolutePath)
       }
 
-    def setCredentials(credentials: Option[(String, String)]): Try[Unit] =
-      trySessionWithFailureMessage("Setting credentials") { ses: Session =>
-        val network = ses.getCommand.getNetwork
-        network.enable()
-        credentials.foreach { case (username, password) =>
-          val headers: java.util.Map[String, Object] = Map[String, Object]("Authorization" -> ("Basic " + new String(Base64.getEncoder.encode(s"$username:$password".getBytes()))).asInstanceOf[Object])
-          network.setExtraHTTPHeaders(headers)
-        }
-      }
+    def setCredentials(credentials: Credentials): Unit = {
+      val network = session.getCommand.getNetwork
+      network.enable()
+      val headers: java.util.Map[String, Object] = Map[String, Object]("Authorization" -> ("Basic " + new String(Base64.getEncoder.encode(s"${credentials.user}:${credentials.password}".getBytes()))).asInstanceOf[Object])
+      network.setExtraHTTPHeaders(headers)
+    }
 
-    def getDom(): Try[DOM] =
-      trySessionWithFailureMessage("Getting DOM") { ses =>
-        val dom = ses.getCommand.getDOM
-        dom.enable()
-        ses.waitDocumentReady()
-        dom
-      }
-    def getNodeId(selector: String): Try[Int] =
-      trySessionWithFailureMessage(s"Getting node id for $selector") { ses =>
-        ses.getNodeId(selector)
-      }
+    def getDom(): DOM = {
+      val dom = session.getCommand.getDOM
+      dom.enable()
+      session.waitDocumentReady()
+      dom
+    }
+    def getNodeId(selector: String): Int = {
+      session.getNodeId(selector)
+    }
 
-    def getDocumentNodeId(): Try[Int] =
-      for {
-        dom <- getDom()
-        id  <- trySessionWithFailureMessage("While getting Document node id") { _ => dom.getDocument.getNodeId }
-      } yield id
+    def getDocumentNodeId(): Int = session.getDom().getDocument.getNodeId
 
-    def waitForPage(action: (Session) => Unit, timeout: Int): Try[Unit] = {
+    def waitForPage(action: (Session) => Unit, timeout: Int): Unit = {
       import  scala.concurrent.duration._
 
       val promise = Promise[Unit]()
-
-
       val listener = new EventListener[AnyRef] {
         override def onEvent(event: Events, value: scala.AnyRef): Unit = {
           value match {
@@ -81,56 +70,27 @@ object SessionHelpers {
           }
         }
       }
-
-      trySessionWithFailureMessage("Waiting for document to be ready") { ses =>
-        ses.addEventListener(listener)
-        action(ses)
-        Await.ready(promise.future, atMost = timeout.seconds)
-        ses.wait(100)
-        ses.waitDocumentReady()
-        ses.removeEventEventListener(listener)
-      }
+      session.addEventListener(listener)
+      action(session)
+      Await.ready(promise.future, atMost = timeout.seconds)
+      session.waitDocumentReady()
+      session.removeEventEventListener(listener)
     }
 
-    def getNodeAttributes(nodeId: Int): Try[Map[String, String]] = {
-      val transformListToMap = (list: Iterable[String]) =>
-        Try { list.grouped(2).map { case key::value::_ => key -> value }.toMap }
-          .recover { case e: Throwable => throw CrawlerCaughtException(s"While making attribute map:\n${e.getMessage}", e) }
-      for {
-        dom <- getDom()
-        attributeList <- trySessionWithFailureMessage("While getting node attributes") { _ => dom.getAttributes(nodeId) }
-        attributeMap  <- transformListToMap(attributeList)
-      } yield attributeMap
+    def getNodeAttributes(nodeId: Int): Map[String, String] = {
+      val attributeList = session.getDom().getAttributes(nodeId).toList
+      attributeList.grouped(2).map { case key::value::_ => key -> value }.toMap
     }
 
-    def mapAttributesToElement(attributes: Map[String, String]): HtmlElement = {
-      val textContentSelector = attributes.get("textContent").map(t => s"textContent='$t'").getOrElse("")
-      val hrefSelector = attributes.get("href").map("href=" + _).getOrElse("")
-      val idSelector = attributes.get("id").map("id" + _).getOrElse("")
-      val combined = Seq(textContentSelector, hrefSelector, idSelector).mkString(",")
-      CustomSelector(s"*[$combined]")
-
-    }
-
-    def download(action: (Session) => Unit, target: File, timeout: Int): Try[File] = {
-      val createTempDir = Try { Files.createTempDirectory("chr_crawler").toFile }
-      val getDownloadedFile = (dempDir: File) => Try {
-        dempDir.listFiles().headOption.getOrElse(throw CrawlerException("No file downloaded"))
-      }
-      val moveFile = (file: File, target: File) => Try {
-        Files.move(file.toPath, new File(target, file.getName).toPath)
-      }
-
-      for {
-        tempDir     <- createTempDir
-        _           <- setupDownloadBehaviour(tempDir)
-        _           <- waitForPage(action, timeout)
-        downloaded  <- getDownloadedFile(tempDir)
-        _           <- moveFile(downloaded, target)
-      } yield downloaded
+    def download(action: (Session) => Unit, target: File, timeout: Int): File = {
+      val tempDir = Files.createTempDirectory("chr_crawler").toFile
+      setupDownloadBehaviour(tempDir)
+      session.waitForPage(action, timeout)
+      val downloadedFile = tempDir.listFiles().headOption.getOrElse(throw CrawlerException("No file downloaded"))
+      val resultFile = new File(target, downloadedFile.getName)
+      Files.move(downloadedFile.toPath, resultFile.toPath)
+      resultFile
     }
   }
-
-
 
 }

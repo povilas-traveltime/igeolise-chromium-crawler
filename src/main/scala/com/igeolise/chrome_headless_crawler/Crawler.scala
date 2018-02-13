@@ -2,10 +2,7 @@ package com.igeolise.chrome_headless_crawler
 
 import java.io.File
 
-import com.igeolise.chrome_headless_crawler.Selectors.toSelectorString
 import crawler.command_parser._
-import io.webfolder.cdp.session.Session
-import io.webfolder.cdp.session.Extensions._
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -15,23 +12,9 @@ case class CrawlerResult(successes: Seq[File], failures: Seq[Action])
 case class CrawlerException(message: String) extends Exception(message)
 case class CrawlerCaughtException(message: String, exception: Throwable) extends Exception(s"$message:\n${exception.getMessage}", exception)
 
-class Crawler(chromeSession: ChromeSession, pageWaitTimeout: Int) extends SessionHelpers {
+class Crawler(chromeSession: ChromeSession, timeout: Int) {
 
   private val log = LoggerFactory.getLogger(classOf[Crawler])
-
-  private def createState(session: Session, actionSequence: Seq[Action], downloadTarget: File): Try[CrawlerState] = {
-    val initState = (documentId: Int) => Try {
-      CrawlerState(
-        Seq(documentId), Seq.empty, actionSequence, LazyLog("Crawling " + actionSequence.mkString("|")),
-        downloadTarget, session, Seq.empty, Seq.empty, Seq.empty
-      )
-    }
-    for {
-      _           <- waitForPage(_.navigate(url), pageWaitTimeout)(session)
-      documentId  <- getDocumentNodeId(session)
-      state       <- initState(documentId)
-    } yield state
-  }
 
   @tailrec
   private def executeScript(state: CrawlerState): CrawlerState = {
@@ -50,6 +33,7 @@ class Crawler(chromeSession: ChromeSession, pageWaitTimeout: Int) extends Sessio
   def crawl(commands: Seq[Action], downloadLocation: File): CrawlerResult = {
     chromeSession.withSession { session =>
 
+      val initialState = StateActions.up
     }
 
 

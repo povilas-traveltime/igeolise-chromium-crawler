@@ -1,98 +1,83 @@
 package com.igeolise.chrome_headless_crawler
 
-import com.igeolise.chrome_headless_crawler.Selectors.toSelectorString
-import crawler.command_parser.{HtmlElement, In}
+import java.io.File
 
-import scala.util.Try
+import crawler.command_parser.{Action, Credentials, HtmlElement, In}
+import io.webfolder.cdp.session.Session
 
 object StateActions {
   import SessionHelpers.SessionHelpersExt
   import io.webfolder.cdp.session.Extensions._
+  import Selectors._
   implicit class StateActionsExt(val state: CrawlerState) extends AnyVal {
 
     def in(element: HtmlElement): CrawlerState = {
-      for {
-        id      <- state.session.getNodeId(toSelectorString(element))
-        result  <- Try { state.appendStack(id) }
-      } yield result
+      val id =  state.session.getNodeId(element.toSelectorString)
+      state.appendStack(id)
     }
+
     def click(): CrawlerState = {
-      for {
-        id      <- state.getStackTop
-        _       <- state.session.waitForPage(_.clickDom(id), pageWaitTimeout)
-        result  <- Try { state }
-      } yield result
+      val id =  state.getStackTop
+      state.session.waitForPage(_.clickDom(id), state.timeout)
+      state
     }
 
     def onCurrentPage(): CrawlerState = {
-      for {
-        pageId  <- state.session.getDocumentNodeId()
-        result  <- Try { state.copy(elementStack = Seq(pageId)) }
-      } yield result
+      val pageId = state.session.getDocumentNodeId()
+      state.copy(elementStack = Seq(pageId))
     }
+
     def typeIn(text: String): CrawlerState = {
-      // refactor rest?
-      val rest = (nodeId: Int) => state.session.trySessionWithFailureMessage("While typing") { ses =>
-        ses.focus(nodeId)
-        ses.sendKeys(text)
-        state
-      }
-      for {
-        nodeId <- state.getStackTop
-        result <- rest(nodeId)
-      } yield result
+      val nodeId = state.getStackTop
+      state.session.focus(nodeId)
+      state.session.sendKeys(text)
+      state
     }
 
     def findContainingInLastResult(text: String): CrawlerState = {
-      for {
-        nodes   <- state.session.trySessionWithFailureMessage("While getting node Ids") { _.getNodeIds(s"a:contains('$text')") }
-        _       <- Try { nodes.map(n => state.session.trySessionWithFailureMessage("While clicking link") { _.clickDom(n) } ) }
-        result  <- Try { state }
-      } yield result
+      val nodeIds = state.session.getNodeIds(s"a:contains('$text')")
+      nodeIds.map(n => state.session.clickDom(n))
+      state
     }
+
     def clickDownload(): CrawlerState = {
-      for {
-        nodeId    <- state.getStackTop
-        download  <- state.session.download(_.clickDom(nodeId), state.target, pageWaitTimeout)
-        result    <- ??? //Try { state.copy(results = Some(download)) }
-      } yield result
+      val nodeId = state.getStackTop
+      val download = state.session.download(_.clickDom(nodeId), state.target, state.timeout)
+      state.copy(successes = download +: state.successes)
     }
+
     def navigateTo(url: String): CrawlerState = {
-      for {
-        _           <- state.session.trySessionWithFailureMessage(s"Navigating to $url") { _.navigate(url) }
-        documentId  <- state.session.getDocumentNodeId()
-        result      <- Try { state.copy(elementStack = Seq(documentId)) }
-      } yield result
+      state.session.navigate(url)
+      val documentId = state.session.getDocumentNodeId()
+      state.copy(elementStack = Seq(documentId))
     }
 
-    /// Option[(String, String)]
-    def navigateToDownload(url: String, credentials: Option[(String, String)]): CrawlerState = {
-      for {
-        _ <- state.session.setCredentials(state.session, credentials)
-        downloaded <- state.session.download(_.navigate(url), state.target, pageWaitTimeout)
-        result <- Try { state.copy(successes = downloaded +: state.successes)}
-      } yield result
+    def navigateToDownload(url: String, credentials: Option[Credentials]): CrawlerState = {
+        credentials.foreach(c=> state.session.setCredentials(c))
+        val downloaded = state.session.download(_.navigate(url), state.target, state.timeout)
+        state.copy(successes = downloaded +: state.successes)
     }
+
     def forAllElems(element: HtmlElement): CrawlerState = {
-      val getNodeIds = (parrentId: Int) => state.session.trySessionWithFailureMessage("While getting node Ids") { ses =>
-        ses.getNodeIds(toSelectorString(element))
-      }
-      for {
-        parentNodeId  <- state.getStackTop
-        nodes         <- getNodeIds(parentNodeId)
-        attributes    <- Try { nodes.map(n => getNodeAttributes(state.session, n)).filter(_.isSuccess).map(_.get) }
-        elements      <- Try { attributes.map(a => mapAttributesToElement(a)) }
-        newStates     <- Try { elements.map(e => remapScriptWithoutForAll(state, sessionFactory, In(e)).get) }
-      } yield newStates
-    }
-    def up: CrawlerState = {
-      Try { state.stackTail }
+      val nodeIds = state.session.getNodeIds(element.toSelectorString)
+      val attributes = nodeIds.map(n => state.session.getNodeAttributes(n))
+      val elements = attributes.map(a => Selectors.attributesToElement(a))
+      state.expandScriptWithElements(elements)
     }
 
+    def expandScriptWithElements(elements: Seq[HtmlElement]): CrawlerState = {
+      val newScripts = elements.map(e => state.doneActions ++ (In(e) +: state.pendingActions))
+      state.copy(unprocessedScripts = state.unprocessedScripts ++ newScripts, pendingActions = Seq.empty)
+    }
 
+    def up: CrawlerState = state.stackTail
   }
 
-
-
+  def createState(session: Session, actionSequence: Seq[Action], downloadTarget: File, timeout: Int): CrawlerState = {
+    CrawlerState(
+      Seq.empty, Seq.empty, actionSequence, LazyLog("Crawling " + actionSequence.mkString("|")),
+      downloadTarget, session, Seq.empty, Seq.empty, Seq.empty, timeout
+    )
+  }
 
 }

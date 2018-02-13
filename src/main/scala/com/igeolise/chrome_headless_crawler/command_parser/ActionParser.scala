@@ -18,7 +18,7 @@ object ActionParser {
         val credentials = for (
           u <- uName;
           p <-pass
-        ) yield (u, p)
+        ) yield Credentials(u, p)
         Some(NavigateToDownload(url, credentials))
       case "onCurrentPage" => Some(OnCurrentPage)
       case "up" => Some(Up)
