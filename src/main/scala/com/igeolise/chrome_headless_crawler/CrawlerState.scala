@@ -21,7 +21,10 @@ case class CrawlerState(
   def appendStack(id: Int): CrawlerState = this.copy(id +: elementStack)
   def stackTail: CrawlerState = this.copy(elementStack.tail)
   def moveActionToDone: CrawlerState = {
-    val action = pendingActions.head
-    this.copy(doneActions = this.doneActions :+ action, pendingActions = this.pendingActions.tail)
+    pendingActions match {
+      case a :: tail => this.copy(doneActions = this.doneActions :+ a, pendingActions = tail)
+      case _ => this
+    }
+
   }
 }

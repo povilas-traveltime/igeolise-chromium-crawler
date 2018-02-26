@@ -1,23 +1,35 @@
-package io.webfolder.cdp.session
+package com.igeolise.chrome_headless_crawler
 
 import java.lang.Math.floor
 
 import io.webfolder.cdp.`type`.constant.MouseButtonType.Left
 import io.webfolder.cdp.`type`.constant.MouseEventType.{MousePressed, MouseReleased}
-import io.webfolder.cdp.exception.CdpException
+import io.webfolder.cdp.exception.ElementNotFoundException
+import io.webfolder.cdp.session.{Mouse, Session}
 
 import scala.collection.JavaConverters._
 
-object Extensions {
+/**
+  * Modified methods of the io.webfolder.cdp.session packge
+  */
+
+object SessionExtensions {
+
   implicit class MouseExt(val mouse: Mouse) extends AnyVal {
+    /**
+      * Copied from io.webfolder.cdp.session.Mouse
+      * Behaviour differs in that this method takes node id directly instead of getting it from the dom by the
+      * means of a selector.
+      */
     def clickDom(nodeId: Int): Session = {
       val dom = mouse.getThis.getCommand.getDOM
       val boxModel = dom.getBoxModel(nodeId, null, null)
-      if (boxModel == null) ???
+      if (boxModel == null)
+        throw new ElementNotFoundException(s"NodeId: $nodeId")
       else {
         val content = boxModel.getContent
-        if (content == null ||
-          content.size() < 2) ???
+        if (content == null || content.size() < 2)
+          throw new ElementNotFoundException("Could not retrieve content box.")
         else {
           val left = floor(content.get(0))
           val top = floor(content.get(1))
@@ -33,6 +45,10 @@ object Extensions {
 
   implicit class SessionExt(val session: Session) extends AnyVal {
 
+    /**
+      * Copied from io.webfolder.cdp.session.Selector
+      * Behaviour differs that this method return all resolved node ids instead of just the first one.
+      */
     def getNodeIds(selector: String): Seq[Int] = {
       val useSizzle = session.useSizzle()
       val trimmedSelector = selector.trim
@@ -51,9 +67,6 @@ object Extensions {
       }
     }
 
-    def focus(id: Int): Session = {
-      session.getCommand.getDOM.focus(id, null, null)
-      session
-    }
+
   }
 }

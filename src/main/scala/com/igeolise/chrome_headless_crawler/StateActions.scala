@@ -7,7 +7,7 @@ import io.webfolder.cdp.session.Session
 
 object StateActions {
   import SessionHelpers.SessionHelpersExt
-  import io.webfolder.cdp.session.Extensions._
+  import SessionExtensions._
   import Selectors._
   implicit class StateActionsExt(val state: CrawlerState) extends AnyVal {
 
@@ -75,8 +75,8 @@ object StateActions {
 
   def createState(session: Session, actionSequence: Seq[Action], downloadTarget: File, timeout: Int): CrawlerState = {
     CrawlerState(
-      Seq.empty, Seq.empty, actionSequence, LazyLog("Crawling " + actionSequence.mkString("|")),
-      downloadTarget, session, Seq.empty, Seq.empty, Seq.empty, timeout
+      Seq.empty, Seq.empty, Seq.empty, LazyLog("Crawling " + actionSequence.mkString("|")),
+      downloadTarget, session, Seq.empty, Seq.empty, Seq(actionSequence), timeout
     )
   }
 

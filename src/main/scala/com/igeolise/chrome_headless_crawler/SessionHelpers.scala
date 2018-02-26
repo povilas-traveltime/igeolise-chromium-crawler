@@ -79,6 +79,7 @@ object SessionHelpers {
 
     def getNodeAttributes(nodeId: Int): Map[String, String] = {
       val attributeList = session.getDom().getAttributes(nodeId).toList
+      // XXX: key::value:_ used because the expected result is a list of 2 elements. Otherwise fail badly.
       attributeList.grouped(2).map { case key::value::_ => key -> value }.toMap
     }
 
@@ -90,6 +91,11 @@ object SessionHelpers {
       val resultFile = new File(target, downloadedFile.getName)
       Files.move(downloadedFile.toPath, resultFile.toPath)
       resultFile
+    }
+
+    def focus(id: Int): Session = {
+      session.getCommand.getDOM.focus(id, null, null)
+      session
     }
   }
 
