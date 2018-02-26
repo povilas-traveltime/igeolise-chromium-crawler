@@ -15,28 +15,15 @@ import io.webfolder.cdp.session.Session
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{Await, Promise}
-import scala.util.Try
 
 object SessionHelpers {
 
   implicit class SessionHelpersExt(val session: Session) extends AnyVal {
-    /**
-      * This method is needed to make sure that sessions get closed on failures, otherwise chromium threads are left hanging.
-      * @param failureMessage A message to add to the message of the exception thrown
-      * @param command action to execute that might fail
-      */
-    def trySessionWithFailureMessage[A](failureMessage: String)(command: (Session) => A): Try[A] = {
-      Try { command(session) }.recover { case e: Throwable =>
-        session.close()
-        throw CrawlerCaughtException(s"$failureMessage:\n${e.getMessage}", e)
-      }
-    }
 
-    def setupDownloadBehaviour(target: File): Try[Unit] =
-      trySessionWithFailureMessage("Setting download location") { ses: Session =>
-        val page = ses.getCommand.getPage
-        page.setDownloadBehavior(DownloadBehavior.Allow, target.getAbsolutePath)
-      }
+    def setupDownloadBehaviour(target: File): Unit = {
+      val page = session.getCommand.getPage
+      page.setDownloadBehavior(DownloadBehavior.Allow, target.getAbsolutePath)
+    }
 
     def setCredentials(credentials: Credentials): Unit = {
       val network = session.getCommand.getNetwork
