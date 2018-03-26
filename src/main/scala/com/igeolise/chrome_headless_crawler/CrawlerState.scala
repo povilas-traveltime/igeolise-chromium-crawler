@@ -2,8 +2,10 @@ package com.igeolise.chrome_headless_crawler
 
 import java.io.File
 
-import crawler.command_parser.Action
+import com.igeolise.chrome_headless_crawler.command_parser.Action
 import io.webfolder.cdp.session.Session
+
+import scala.concurrent.duration.FiniteDuration
 
 case class CrawlerState(
   elementStack:   Seq[Int],
@@ -15,7 +17,7 @@ case class CrawlerState(
   successes:      Seq[File],
   failures:       Seq[Seq[Action]],
   unprocessedScripts: Seq[Seq[Action]],
-  timeout:        Int
+  timeout:        FiniteDuration
 ) {
   def getStackTop: Int = elementStack.headOption.getOrElse(throw CrawlerException("Element stack empty"))
   def appendStack(id: Int): CrawlerState = this.copy(id +: elementStack)
@@ -26,5 +28,14 @@ case class CrawlerState(
       case _ => this
     }
 
+  }
+}
+
+object CrawlerState {
+  def createState(session: Session, actionSequence: Seq[Action], downloadTarget: File, timeout: FiniteDuration): CrawlerState = {
+    CrawlerState(
+      Seq.empty, Seq.empty, Seq.empty, LazyLog("Crawling " + actionSequence.mkString("|")),
+      downloadTarget, session, Seq.empty, Seq.empty, Seq(actionSequence), timeout
+    )
   }
 }

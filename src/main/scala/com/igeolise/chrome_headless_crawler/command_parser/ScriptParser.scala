@@ -1,4 +1,4 @@
-package crawler.command_parser
+package com.igeolise.chrome_headless_crawler.command_parser
 
 object ScriptParser {
   class ParsingException(msg: String) extends Exception(msg)

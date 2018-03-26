@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.Base64
 
-import crawler.command_parser.Credentials
+import com.igeolise.chrome_headless_crawler.command_parser.Credentials
 import io.webfolder.cdp.`type`.constant.DownloadBehavior
 import io.webfolder.cdp.command.DOM
 import io.webfolder.cdp.event.Events
@@ -14,6 +14,7 @@ import io.webfolder.cdp.listener.EventListener
 import io.webfolder.cdp.session.Session
 
 import scala.collection.JavaConversions._
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Promise}
 
 object SessionHelpers {
@@ -44,14 +45,14 @@ object SessionHelpers {
 
     def getDocumentNodeId(): Int = session.getDom().getDocument.getNodeId
 
-    def waitForPage(action: (Session) => Unit, timeout: Int): Unit = {
+    def waitForPage(action: (Session) => Unit, timeout: FiniteDuration): Unit = {
       import  scala.concurrent.duration._
 
       val promise = Promise[Unit]()
       val listener = new EventListener[AnyRef] {
         override def onEvent(event: Events, value: scala.AnyRef): Unit = {
           value match {
-            case e: LoadingFinished => promise.success(())
+            case _: LoadingFinished => promise.success(())
             case e: LifecycleEvent if e.getName == "networkIdle" => promise.success(())
             case _ =>
           }
@@ -59,7 +60,7 @@ object SessionHelpers {
       }
       session.addEventListener(listener)
       action(session)
-      Await.ready(promise.future, atMost = timeout.seconds)
+      Await.ready(promise.future, atMost = timeout)
       session.waitDocumentReady()
       session.removeEventEventListener(listener)
     }
@@ -70,7 +71,7 @@ object SessionHelpers {
       attributeList.grouped(2).map { case key::value::_ => key -> value }.toMap
     }
 
-    def download(action: (Session) => Unit, target: File, timeout: Int): File = {
+    def download(action: (Session) => Unit, target: File, timeout: FiniteDuration): File = {
       val tempDir = Files.createTempDirectory("chr_crawler").toFile
       setupDownloadBehaviour(tempDir)
       session.waitForPage(action, timeout)

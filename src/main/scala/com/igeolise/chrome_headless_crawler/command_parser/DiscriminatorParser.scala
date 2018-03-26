@@ -1,4 +1,4 @@
-package crawler.command_parser
+package com.igeolise.chrome_headless_crawler.command_parser
 
 object DiscriminatorParser {
   private val regex = "(\\w+)(?: (.+))".r

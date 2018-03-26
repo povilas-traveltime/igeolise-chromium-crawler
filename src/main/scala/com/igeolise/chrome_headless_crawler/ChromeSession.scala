@@ -11,6 +11,9 @@ import sys.process._
 
 class ChromeSession(chromeLaunchCommand: String, sessionFactoryParams: Seq[String]) {
 
+  val portScanFloor = 9500
+  val portScanCeiling = 60000
+
   private def destroyFactory(factory: SessionFactory): Unit = {
     val port = factory.getPort
     factory.close()
@@ -18,7 +21,7 @@ class ChromeSession(chromeLaunchCommand: String, sessionFactoryParams: Seq[Strin
   }
 
   private def getFreePort: Int = {
-    (9333 until 60000).find { port =>
+    (portScanFloor to portScanCeiling).find { port =>
       try {
         new ServerSocket(port).close()
         true
@@ -35,13 +38,12 @@ class ChromeSession(chromeLaunchCommand: String, sessionFactoryParams: Seq[Strin
     })
   }
 
-  def withSession[T](r :(Session) => T): T = {
+  def withSession[T](f :(Session) => T): T = {
     val launcher = new Launcher(getFreePort)
     val factory = launcher.launch(chromeLaunchCommand, sessionFactoryParams)
     createShutdownHook(factory)
-    val port = factory.getPort
     val session = factory.create()
-    val result = r(session)
+    val result = f(session)
     session.close()
     factory.close()
     destroyFactory(factory)

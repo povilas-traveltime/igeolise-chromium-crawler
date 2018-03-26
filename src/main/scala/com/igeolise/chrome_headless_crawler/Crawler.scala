@@ -2,16 +2,16 @@ package com.igeolise.chrome_headless_crawler
 
 import java.io.File
 
-import crawler.command_parser._
+import com.igeolise.chrome_headless_crawler.command_parser._
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
+import scala.concurrent.duration.FiniteDuration
 
 case class CrawlerResult(successes: Seq[File], failures: Seq[Seq[Action]])
 case class CrawlerException(message: String) extends Exception(message)
-case class CrawlerCaughtException(message: String, exception: Throwable) extends Exception(s"$message:\n${exception.getMessage}", exception)
 
-class Crawler(chromeSession: ChromeSession, timeout: Int) {
+class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
 
   private val log = LoggerFactory.getLogger(classOf[Crawler])
 
@@ -28,13 +28,13 @@ class Crawler(chromeSession: ChromeSession, timeout: Int) {
         )
         val stateAfterExecution: CrawlerState = executeScript(stateForExecution)
         executeScripts(stateAfterExecution)
-      case _ => state
+      case Nil => state
     }
   }
 
   def crawl(commands: Seq[Action], downloadLocation: File): CrawlerResult = {
     chromeSession.withSession { session =>
-      val initialState = StateActions.createState(
+      val initialState = CrawlerState.createState(
         session,
         commands,
         downloadLocation,
@@ -47,11 +47,11 @@ class Crawler(chromeSession: ChromeSession, timeout: Int) {
 
   @tailrec
   private def executeScript(state: CrawlerState): CrawlerState = {
-    state.pendingActions match {
-      case a :: _ =>
+    state.pendingActions.headOption match {
+      case Some(a) =>
         val stateAfterAction = executeAction(a, state)
         executeScript(stateAfterAction)
-      case _ => state
+      case None => state
     }
   }
 

@@ -2,8 +2,10 @@ package com.igeolise.chrome_headless_crawler
 
 import java.io.File
 
-import crawler.command_parser.{Action, Credentials, HtmlElement, In}
+import com.igeolise.chrome_headless_crawler.command_parser.{Action, Credentials, HtmlElement, In}
 import io.webfolder.cdp.session.Session
+
+import scala.concurrent.duration.FiniteDuration
 
 object StateActions {
   import SessionHelpers.SessionHelpersExt
@@ -71,13 +73,6 @@ object StateActions {
     }
 
     def up: CrawlerState = state.stackTail
-  }
-
-  def createState(session: Session, actionSequence: Seq[Action], downloadTarget: File, timeout: Int): CrawlerState = {
-    CrawlerState(
-      Seq.empty, Seq.empty, Seq.empty, LazyLog("Crawling " + actionSequence.mkString("|")),
-      downloadTarget, session, Seq.empty, Seq.empty, Seq(actionSequence), timeout
-    )
   }
 
 }

@@ -1,6 +1,6 @@
 package com.igeolise.chrome_headless_crawler
 
-import crawler.command_parser._
+import com.igeolise.chrome_headless_crawler.command_parser._
 
 object Selectors {
 
