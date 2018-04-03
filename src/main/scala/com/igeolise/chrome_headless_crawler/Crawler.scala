@@ -7,11 +7,10 @@ import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
-
-case class CrawlerResult(successes: Seq[File], failures: Seq[Seq[Action]])
-case class CrawlerException(message: String) extends Exception(message)
+import scala.util.{Failure, Success}
 
 class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
+  import CrawlerResult._
 
   private val log = LoggerFactory.getLogger(classOf[Crawler])
 
@@ -20,10 +19,9 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
     state.unprocessedScripts match {
       case head :: tail =>
         val stateForExecution = state.copy(
-          doneActions = Seq.empty,
-          pendingActions = head,
+          script = head,
           elementStack = Seq.empty,
-          lazyLogger = LazyLog("Executing " + head.mkString("|")),
+          lazyLogger = LazyLog("Executing " + head.toString),
           unprocessedScripts = tail
         )
         val stateAfterExecution: CrawlerState = executeScript(stateForExecution)
@@ -32,33 +30,38 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
     }
   }
 
-  def crawl(commands: Seq[Action], downloadLocation: File): CrawlerResult = {
+  def crawl(script: Script, downloadLocation: File): Either[CrawlerFailure, CrawlerSuccess] = {
     chromeSession.withSession { session =>
       val initialState = CrawlerState.createState(
         session,
-        commands,
+        script,
         downloadLocation,
         timeout
       )
       val resultState = executeScripts(initialState)
-      CrawlerResult(resultState.successes, resultState.failures)
+      if (resultState.failures.nonEmpty) WithFailures(resultState.successes, resultState.failures)
+      else Ok(resultState.successes)
+
+    } match {
+      case Success(result) => Right(result)
+      case Failure(e) => Left(CrawlerFailure(e.getMessage))
     }
   }
 
   @tailrec
   private def executeScript(state: CrawlerState): CrawlerState = {
-    state.pendingActions.headOption match {
-      case Some(a) =>
-        val stateAfterAction = executeAction(a, state)
+    state.stateWithNextAction match {
+      case Some(s) =>
+        val stateAfterAction = executeAction(s)
         executeScript(stateAfterAction)
       case None => state
     }
   }
 
-  private def executeAction(action: Action, state: CrawlerState): CrawlerState = {
+  private def executeAction(state: CrawlerState): CrawlerState = {
     import StateActions.StateActionsExt
 
-    (action match {
+    state.script.getCurrentAction match {
       case In(element) => state.in(element)
       case Click => state.click()
       case ClickDownload => state.clickDownload()
@@ -69,6 +72,6 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
       case NavigateTo(url) => state.navigateTo(url)
       case NavigateToDownload(url, credentials) => state.navigateToDownload(url, credentials)
       case ForAllElems(element) => state.forAllElems(element)
-    }).moveActionToDone
+    }
   }
 }

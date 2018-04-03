@@ -75,7 +75,7 @@ object SessionHelpers {
       val tempDir = Files.createTempDirectory("chr_crawler").toFile
       setupDownloadBehaviour(tempDir)
       session.waitForPage(action, timeout)
-      val downloadedFile = tempDir.listFiles().headOption.getOrElse(throw CrawlerException("No file downloaded"))
+      val downloadedFile = tempDir.listFiles().headOption.getOrElse(throw new Exception("No file downloaded"))
       val resultFile = new File(target, downloadedFile.getName)
       Files.move(downloadedFile.toPath, resultFile.toPath)
       resultFile

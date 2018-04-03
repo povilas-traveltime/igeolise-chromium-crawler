@@ -1,13 +1,9 @@
 package com.igeolise.chrome_headless_crawler
 
-import java.io.File
-
-import com.igeolise.chrome_headless_crawler.command_parser.{Action, Credentials, HtmlElement, In}
-import io.webfolder.cdp.session.Session
-
-import scala.concurrent.duration.FiniteDuration
+import com.igeolise.chrome_headless_crawler.command_parser.{Credentials, HtmlElement, In}
 
 object StateActions {
+  import com.igeolise.chrome_headless_crawler.CrawlerResult.FileWithLog
   import SessionHelpers.SessionHelpersExt
   import SessionExtensions._
   import Selectors._
@@ -45,7 +41,7 @@ object StateActions {
     def clickDownload(): CrawlerState = {
       val nodeId = state.getStackTop
       val download = state.session.download(_.clickDom(nodeId), state.target, state.timeout)
-      state.copy(successes = download +: state.successes)
+      state.copy(successes = FileWithLog(download, state.lazyLogger) +: state.successes)
     }
 
     def navigateTo(url: String): CrawlerState = {
@@ -57,7 +53,7 @@ object StateActions {
     def navigateToDownload(url: String, credentials: Option[Credentials]): CrawlerState = {
         credentials.foreach(c=> state.session.setCredentials(c))
         val downloaded = state.session.download(_.navigate(url), state.target, state.timeout)
-        state.copy(successes = downloaded +: state.successes)
+        state.copy(successes = FileWithLog(downloaded, state.lazyLogger) +: state.successes)
     }
 
     def forAllElems(element: HtmlElement): CrawlerState = {
@@ -68,8 +64,8 @@ object StateActions {
     }
 
     def expandScriptWithElements(elements: Seq[HtmlElement]): CrawlerState = {
-      val newScripts = elements.map(e => state.doneActions ++ (In(e) +: state.pendingActions))
-      state.copy(unprocessedScripts = state.unprocessedScripts ++ newScripts, pendingActions = Seq.empty)
+      val newScripts = elements.map(e => state.script.replaceCurrentActionAndReset(In(e)))
+      state.copy(unprocessedScripts = state.unprocessedScripts ++ newScripts)
     }
 
     def up: CrawlerState = state.stackTail
