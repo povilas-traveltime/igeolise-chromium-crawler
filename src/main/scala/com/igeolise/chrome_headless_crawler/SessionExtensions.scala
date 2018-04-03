@@ -8,6 +8,7 @@ import io.webfolder.cdp.exception.ElementNotFoundException
 import io.webfolder.cdp.session.{Mouse, Session}
 
 import scala.collection.JavaConverters._
+import scalaz.\/
 
 /**
   * Modified methods of the io.webfolder.cdp.session packge
@@ -49,22 +50,24 @@ object SessionExtensions {
       * Copied from io.webfolder.cdp.session.Selector
       * Behaviour differs that this method return all resolved node ids instead of just the first one.
       */
-    def getNodeIds(selector: String): Seq[Int] = {
-      val useSizzle = session.useSizzle()
-      val trimmedSelector = selector.trim
-      val dom = session.getCommand.getDOM
-      val useXpath = trimmedSelector.startsWith("/")
-      if (useXpath || useSizzle) {
-        val objectIds = session.getObjectIds(selector)
-        objectIds.asScala.map { id =>
-          val nodeId = dom.requestNode(id)
-          session.releaseObject(id)
-          nodeId.toInt
+    def getNodeIds(selector: String): LogEntry \/ Seq[Int] = {
+      \/.fromTryCatchNonFatal {
+        val useSizzle = session.useSizzle()
+        val trimmedSelector = selector.trim
+        val dom = session.getCommand.getDOM
+        val useXpath = trimmedSelector.startsWith("/")
+        if (useXpath || useSizzle) {
+          val objectIds = session.getObjectIds(selector)
+          objectIds.asScala.map { id =>
+            val nodeId = dom.requestNode(id)
+            session.releaseObject(id)
+            nodeId.toInt
+          }
+        } else {
+          val documentId = dom.getDocument().getNodeId
+          dom.querySelectorAll(documentId, selector).asScala.map(_.toInt)
         }
-      } else {
-        val documentId = dom.getDocument().getNodeId
-        dom.querySelectorAll(documentId, selector).asScala.map(_.toInt)
-      }
+      }.leftMap(_ => LogEntry("Failed while getting node ids"))
     }
 
 

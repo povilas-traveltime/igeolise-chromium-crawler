@@ -2,6 +2,8 @@ package com.igeolise.chrome_headless_crawler
 
 import com.igeolise.chrome_headless_crawler.command_parser.{Credentials, HtmlElement, In}
 
+import scalaz.{-\/, \/-}
+
 object StateActions {
   import com.igeolise.chrome_headless_crawler.CrawlerResult.FileWithLog
   import SessionHelpers.SessionHelpersExt
@@ -57,10 +59,15 @@ object StateActions {
     }
 
     def forAllElems(element: HtmlElement): CrawlerState = {
-      val nodeIds = state.session.getNodeIds(element.toSelectorString)
-      val attributes = nodeIds.map(n => state.session.getNodeAttributes(n))
-      val elements = attributes.map(a => Selectors.attributesToElement(a))
-      state.expandScriptWithElements(elements)
+      val newElements = for {
+        nodeIds     <- state.session.getNodeIds(element.toSelectorString)
+        attributes  <- nodeIds.map(n => state.session.getNodeAttributes(n))
+        elements    <- attributes.map(a => Selectors.attributesToElement(a))
+      } yield elements
+      newElements match {
+        case -\/(logEntry) => ???
+        case \/-(elements) => state.expandScriptWithElements(elements)
+      }
     }
 
     def expandScriptWithElements(elements: Seq[HtmlElement]): CrawlerState = {

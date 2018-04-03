@@ -16,14 +16,18 @@ import io.webfolder.cdp.session.Session
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Promise}
+import scalaz.\/
+import scalaz.syntax.std.option._
 
 object SessionHelpers {
 
   implicit class SessionHelpersExt(val session: Session) extends AnyVal {
 
-    def setupDownloadBehaviour(target: File): Unit = {
-      val page = session.getCommand.getPage
-      page.setDownloadBehavior(DownloadBehavior.Allow, target.getAbsolutePath)
+    def setupDownloadBehaviour(target: File): LogEntry \/ Unit = {
+      \/.fromTryCatchNonFatal {
+        val page = session.getCommand.getPage
+        page.setDownloadBehavior(DownloadBehavior.Allow, target.getAbsolutePath)
+      }.leftMap(_ => LogEntry("Failed to set download behaviour"))
     }
 
     def setCredentials(credentials: Credentials): Unit = {
@@ -45,7 +49,7 @@ object SessionHelpers {
 
     def getDocumentNodeId(): Int = session.getDom().getDocument.getNodeId
 
-    def waitForPage(action: (Session) => Unit, timeout: FiniteDuration): Unit = {
+    def waitForPage(action: (Session) => Unit, timeout: FiniteDuration): LogEntry \/ Unit = {
       import  scala.concurrent.duration._
 
       val promise = Promise[Unit]()
@@ -60,25 +64,40 @@ object SessionHelpers {
       }
       session.addEventListener(listener)
       action(session)
-      Await.ready(promise.future, atMost = timeout)
+      val future = promise.future
+      Await.ready(future, atMost = timeout)
+      val result = future.value.map(_ => ()).toRightDisjunction(LogEntry("Browser waiting for action to complete timeout"))
       session.waitDocumentReady()
       session.removeEventEventListener(listener)
+      result
     }
 
-    def getNodeAttributes(nodeId: Int): Map[String, String] = {
-      val attributeList = session.getDom().getAttributes(nodeId).toList
-      // XXX: key::value:_ used because the expected result is a list of 2 elements. Otherwise fail badly.
-      attributeList.grouped(2).map { case key::value::_ => key -> value }.toMap
+    def getNodeAttributes(nodeId: Int): LogEntry \/ Map[String, String]  = {
+      \/.fromTryCatchNonFatal {
+        val attributeList = session.getDom().getAttributes(nodeId).toList
+        attributeList.grouped(2).map { l => l.head -> l.tail.head }.toMap
+      }.leftMap(_ => LogEntry("Failed to get node attributes"))
     }
 
-    def download(action: (Session) => Unit, target: File, timeout: FiniteDuration): File = {
-      val tempDir = Files.createTempDirectory("chr_crawler").toFile
-      setupDownloadBehaviour(tempDir)
-      session.waitForPage(action, timeout)
-      val downloadedFile = tempDir.listFiles().headOption.getOrElse(throw new Exception("No file downloaded"))
-      val resultFile = new File(target, downloadedFile.getName)
-      Files.move(downloadedFile.toPath, resultFile.toPath)
-      resultFile
+    private def createTempDir(prefix: String): Throwable \/ File = {
+      \/.fromTryCatchNonFatal(Files.createTempDirectory(prefix).toFile)
+    }
+
+    private def moveFiles(from: File, to: File): LogEntry \/ Unit = {
+      \/.fromTryCatchNonFatal(Files.move(from.toPath, to.toPath)).map(_ => ())
+        .leftMap(_ => LogEntry(s"Failed while moving file from: ${from.getAbsolutePath} to: ${to.getAbsolutePath}"))
+    }
+
+    def download(action: (Session) => Unit, target: File, timeout: FiniteDuration): LogEntry \/ File = {
+      for {
+        tempDir <- createTempDir("chr_crawler")
+        _       <- setupDownloadBehaviour(tempDir)
+        _       <- session.waitForPage(action, timeout)
+        downloadedFile  <- tempDir.listFiles().headOption.toRightDisjunction(LogEntry("Downloaded file not found"))
+        resultFile      <- \/.fromTryCatchNonFatal(new File(target, downloadedFile.getName))
+                              .leftMap(_ => LogEntry(s"Failed to create file ${downloadedFile.getName} in ${target.getAbsolutePath}"))
+        _       <- moveFiles(downloadedFile, resultFile)
+      } yield resultFile
     }
 
     def focus(id: Int): Session = {

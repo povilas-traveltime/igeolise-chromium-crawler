@@ -1,12 +1,14 @@
 package com.igeolise.chrome_headless_crawler
 
-case class LazyLog(header: String, log: Seq[String] = Seq.empty) {
+case class LogEntry(message: String)
 
-  def info(msg: String): LazyLog = {
-    this.copy(log = msg +: log)
+case class LazyLog(header: String, log: Seq[LogEntry] = Seq.empty) {
+
+  def info(message: LogEntry): LazyLog = {
+    this.copy(log = message +: log)
   }
   def success: String = header + " succeeded"
 
-  def failure(msg: String) : Seq[String] = header +: log :+ msg
+  def failure(message: LogEntry) : Seq[String] = (header +: log :+ message).map(_.toString)
 
 }
