@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.util.Base64
 
 import com.igeolise.chrome_headless_crawler.command_parser.Credentials
+import com.igeolise.chrome_headless_crawler.model.LogEntry
 import io.webfolder.cdp.`type`.constant.DownloadBehavior
 import io.webfolder.cdp.command.DOM
 import io.webfolder.cdp.event.Events
@@ -30,11 +31,13 @@ object SessionHelpers {
       }.leftMap(_ => LogEntry("Failed to set download behaviour"))
     }
 
-    def setCredentials(credentials: Credentials): Unit = {
-      val network = session.getCommand.getNetwork
-      network.enable()
-      val headers: java.util.Map[String, Object] = Map[String, Object]("Authorization" -> ("Basic " + new String(Base64.getEncoder.encode(s"${credentials.user}:${credentials.password}".getBytes()))).asInstanceOf[Object])
-      network.setExtraHTTPHeaders(headers)
+    def setCredentials(credentials: Credentials): LogEntry \/ Unit = {
+      \/.fromTryCatchNonFatal {
+        val network = session.getCommand.getNetwork
+        network.enable()
+        val headers: java.util.Map[String, Object] = Map[String, Object]("Authorization" -> ("Basic " + new String(Base64.getEncoder.encode(s"${credentials.user}:${credentials.password}".getBytes()))).asInstanceOf[Object])
+        network.setExtraHTTPHeaders(headers)
+      }.leftMap(e => LogEntry(s"Failed to set credentials with message: ${e.getMessage}"))
     }
 
     def getDom(): DOM = {
@@ -47,7 +50,9 @@ object SessionHelpers {
       session.getNodeId(selector)
     }
 
-    def getDocumentNodeId(): Int = session.getDom().getDocument.getNodeId
+    def getDocumentNodeId(): LogEntry \/ Int = \/.fromTryCatchNonFatal(
+      session.getDom().getDocument.getNodeId.toInt
+    ).leftMap(_ => LogEntry("Failed to get document node id"))
 
     def waitForPage(action: (Session) => Unit, timeout: FiniteDuration): LogEntry \/ Unit = {
       import  scala.concurrent.duration._
@@ -79,8 +84,9 @@ object SessionHelpers {
       }.leftMap(_ => LogEntry("Failed to get node attributes"))
     }
 
-    private def createTempDir(prefix: String): Throwable \/ File = {
+    private def createTempDir(prefix: String): LogEntry \/ File = {
       \/.fromTryCatchNonFatal(Files.createTempDirectory(prefix).toFile)
+        .leftMap(e => LogEntry(s"Failed to create dir with message: ${e.getMessage}"))
     }
 
     private def moveFiles(from: File, to: File): LogEntry \/ Unit = {
@@ -100,9 +106,17 @@ object SessionHelpers {
       } yield resultFile
     }
 
-    def focus(id: Int): Session = {
-      session.getCommand.getDOM.focus(id, null, null)
-      session
+    def focus(id: Int): LogEntry \/ Session = {
+      \/.fromTryCatchNonFatal {
+        session.getCommand.getDOM.focus(id, null, null)
+        session
+      }.leftMap(_ => LogEntry(s"Failed to focus on element $id"))
+    }
+
+    def typeIn(text: String): LogEntry \/ Session = {
+      \/.fromTryCatchNonFatal(
+        session.sendKeys(text)
+      ).leftMap(_ => LogEntry(s"Failed to enter text: '$text'"))
     }
   }
 

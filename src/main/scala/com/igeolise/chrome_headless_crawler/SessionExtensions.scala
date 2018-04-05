@@ -2,6 +2,7 @@ package com.igeolise.chrome_headless_crawler
 
 import java.lang.Math.floor
 
+import com.igeolise.chrome_headless_crawler.model.LogEntry
 import io.webfolder.cdp.`type`.constant.MouseButtonType.Left
 import io.webfolder.cdp.`type`.constant.MouseEventType.{MousePressed, MouseReleased}
 import io.webfolder.cdp.exception.ElementNotFoundException
@@ -22,25 +23,27 @@ object SessionExtensions {
       * Behaviour differs in that this method takes node id directly instead of getting it from the dom by the
       * means of a selector.
       */
-    def clickDom(nodeId: Int): Session = {
-      val dom = mouse.getThis.getCommand.getDOM
-      val boxModel = dom.getBoxModel(nodeId, null, null)
-      if (boxModel == null)
-        throw new ElementNotFoundException(s"NodeId: $nodeId")
-      else {
-        val content = boxModel.getContent
-        if (content == null || content.size() < 2)
-          throw new ElementNotFoundException("Could not retrieve content box.")
+    def clickDom(nodeId: Int): LogEntry \/ Session = {
+      \/.fromTryCatchNonFatal {
+        val dom = mouse.getThis.getCommand.getDOM
+        val boxModel = dom.getBoxModel(nodeId, null, null)
+        if (boxModel == null)
+          throw new ElementNotFoundException(s"NodeId: $nodeId")
         else {
-          val left = floor(content.get(0))
-          val top = floor(content.get(1))
-          val input = mouse.getThis.getCommand.getInput
-          val clickCount = 1
-          input.dispatchMouseEvent(MousePressed, left, top, null, null, Left, clickCount, null, null)
-          input.dispatchMouseEvent(MouseReleased, left, top, null, null, Left, clickCount, null, null)
-          mouse.getThis
+          val content = boxModel.getContent
+          if (content == null || content.size() < 2)
+            throw new ElementNotFoundException("Could not retrieve content box.")
+          else {
+            val left = floor(content.get(0))
+            val top = floor(content.get(1))
+            val input = mouse.getThis.getCommand.getInput
+            val clickCount = 1
+            input.dispatchMouseEvent(MousePressed, left, top, null, null, Left, clickCount, null, null)
+            input.dispatchMouseEvent(MouseReleased, left, top, null, null, Left, clickCount, null, null)
+            mouse.getThis
+          }
         }
-      }
+      }.leftMap(e => LogEntry(s"Failed while getting node id's with message: ${e.getMessage}"))
     }
   }
 
@@ -50,7 +53,7 @@ object SessionExtensions {
       * Copied from io.webfolder.cdp.session.Selector
       * Behaviour differs that this method return all resolved node ids instead of just the first one.
       */
-    def getNodeIds(selector: String): LogEntry \/ Seq[Int] = {
+    def getNodeIds(selector: String): LogEntry \/ List[Int] = {
       \/.fromTryCatchNonFatal {
         val useSizzle = session.useSizzle()
         val trimmedSelector = selector.trim
@@ -62,10 +65,10 @@ object SessionExtensions {
             val nodeId = dom.requestNode(id)
             session.releaseObject(id)
             nodeId.toInt
-          }
+          }.toList
         } else {
           val documentId = dom.getDocument().getNodeId
-          dom.querySelectorAll(documentId, selector).asScala.map(_.toInt)
+          dom.querySelectorAll(documentId, selector).asScala.map(_.toInt).toList
         }
       }.leftMap(_ => LogEntry("Failed while getting node ids"))
     }

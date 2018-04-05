@@ -3,11 +3,15 @@ package com.igeolise.chrome_headless_crawler
 import java.io.File
 
 import com.igeolise.chrome_headless_crawler.command_parser._
+import com.igeolise.chrome_headless_crawler.model._
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
+import com.igeolise.chrome_headless_crawler.model.ComposedLenses._
+
+import scalaz.syntax.id._
 
 class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
   import CrawlerResult._
@@ -18,13 +22,10 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
   private def executeScripts(state: CrawlerState): CrawlerState = {
     state.unprocessedScripts match {
       case head :: tail =>
-        val stateForExecution = state.copy(
-          script = head,
-          elementStack = Seq.empty,
-          lazyLogger = LazyLog("Executing " + head.toString),
-          unprocessedScripts = tail
-        )
-        val stateAfterExecution: CrawlerState = executeScript(stateForExecution)
+        val stateAfterExecution = state |>
+          CrawlerState.scriptState.set(ScriptState(head, ElementStack(List.empty), LazyLog(s"Executing ${head.toString}"))) |>
+          CrawlerState.unprocessedScripts.set(tail) |>
+          executeScript
         executeScripts(stateAfterExecution)
       case Nil => state
     }
@@ -32,7 +33,7 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
 
   def crawl(script: Script, downloadLocation: File): Either[CrawlerFailure, CrawlerSuccess] = {
     chromeSession.withSession { session =>
-      val initialState = CrawlerState.createState(
+      val initialState = CrawlerStateFactory.createState(
         session,
         script,
         downloadLocation,
@@ -50,28 +51,29 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
 
   @tailrec
   private def executeScript(state: CrawlerState): CrawlerState = {
-    state.stateWithNextAction match {
-      case Some(s) =>
-        val stateAfterAction = executeAction(s)
-        executeScript(stateAfterAction)
+    state.scriptState.script.getAction match {
       case None => state
+      case Some(action) =>
+        val newState = executeAction(state, action)
+        executeScript(newState)
     }
   }
 
-  private def executeAction(state: CrawlerState): CrawlerState = {
+  private def executeAction(state: CrawlerState, action: Action): CrawlerState = {
     import StateActions.StateActionsExt
+    val stateWithLog = scriptLogL.modify(_.append(LogEntry(s"Executing action '${action.toString}'"))) (state)
 
-    state.script.getCurrentAction match {
-      case In(element) => state.in(element)
-      case Click => state.click()
-      case ClickDownload => state.clickDownload()
-      case OnCurrentPage => state.onCurrentPage()
-      case Up => state.up
-      case TypeIn(text) => state.typeIn(text)
-      case FindContainingInLastResult(text) => state.findContainingInLastResult(text)
-      case NavigateTo(url) => state.navigateTo(url)
-      case NavigateToDownload(url, credentials) => state.navigateToDownload(url, credentials)
-      case ForAllElems(element) => state.forAllElems(element)
-    }
+    (action match {
+      case In(element) => stateWithLog.in(element)
+      case Click => stateWithLog.click()
+      case ClickDownload => stateWithLog.clickDownload()
+      case OnCurrentPage => stateWithLog.onCurrentPage()
+      case Up => stateWithLog.up
+      case TypeIn(text) => stateWithLog.typeIn(text)
+      case FindContainingInLastResult(text) => stateWithLog.findContainingInLastResult(text)
+      case NavigateTo(url) => stateWithLog.navigateTo(url)
+      case NavigateToDownload(url, credentials) => stateWithLog.navigateToDownload(url, credentials)
+      case ForAllElems(element) => stateWithLog.forAllElems(element)
+    }) |> currentScriptL.modify(_.withNextAction)
   }
 }
