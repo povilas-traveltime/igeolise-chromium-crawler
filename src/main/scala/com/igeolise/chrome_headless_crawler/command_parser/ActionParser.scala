@@ -1,5 +1,7 @@
 package com.igeolise.chrome_headless_crawler.command_parser
 
+import scala.Option
+
 object ActionParser {
   private val commandWithParam = "(\\w+) (.+)".r
   private val commandWithElement = "(\\w+) (\\S+)(?> (\\S+) (\\S+))?".r
@@ -10,11 +12,11 @@ object ActionParser {
       case "click" => Some(Click)
       case "clickDownload" => Some(ClickDownload)
       case commandWithParam("navigateTo", url) => Some(NavigateTo(url))
-      case commandWithElement("navigateToDownload", url, NullToOption(uName), NullToOption(pass)) =>
-        val credentials = for (
-          u <- uName;
-          p <-pass
-        ) yield Credentials(u, p)
+      case commandWithElement("navigateToDownload", url, uName, pass) =>
+        val credentials = for {
+          u <- Option(uName)
+          p <- Option(pass)
+        } yield Credentials(u, p)
         Some(NavigateToDownload(url, credentials))
       case "onCurrentPage" => Some(OnCurrentPage)
       case "up" => Some(Up)
