@@ -90,14 +90,26 @@ object StateActions {
       } yield downloaded) |> handleEither(addDownloadToState)
     }
 
+    /**
+      * Creates new scripts where each of the matching <element> is selected by an in action and ends execution of the current script
+      * Emulates the behaviour of map or forEach
+      * @param element
+      * @return
+      */
     def forAllElems(element: HtmlElement): CrawlerState = {
       (for {
         nodeIds     <- state.session.getNodeIds(element.toSelectorString)
         attributes  <- nodeIds.map(n => state.session.getNodeAttributes(n)).sequenceU
         elements    <- \/-(attributes.map(a => Selectors.attributesToElement(a)))
-      } yield elements) |> handleEither {e: List[HtmlElement] => { s: CrawlerState => s.expandScriptWithElements(e)} }
+      } yield elements) |> handleEither {e: List[HtmlElement] => { s: CrawlerState =>
+        s.expandScriptWithElements(e) |> currentScriptL.modify(_.endScript)
+      } }
     }
 
+    /**
+      * Injects new element select actions instead of the current action in the script forming new scripts.
+      * @param elements elements to select
+      */
     def expandScriptWithElements(elements: Seq[HtmlElement]): CrawlerState = {
       val newScripts = elements.map(e => state.scriptState.script.replaceCurrentActionAndReset(In(e)))
       state |> CrawlerState.unprocessedScripts.modify(_ ++ newScripts)
