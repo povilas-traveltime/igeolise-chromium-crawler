@@ -3,7 +3,7 @@ package com.igeolise.chrome_headless_crawler
 import java.net.ServerSocket
 import io.webfolder.cdp.Launcher
 import io.webfolder.cdp.session.{Session, SessionFactory}
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent._
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -47,7 +47,7 @@ class ChromeSession(chromeLaunchCommand: String, sessionFactoryParams: Seq[Strin
   def withSession[T](f :(Session) => T): Try[T] = {
     getFreePort.map { p =>
       val launcher = new Launcher(p)
-      val factory = launcher.launch(chromeLaunchCommand, sessionFactoryParams)
+      val factory = launcher.launch(chromeLaunchCommand, sessionFactoryParams.asJava)
       createShutdownHook(factory)
       val session = factory.create()
       val result = f(session)

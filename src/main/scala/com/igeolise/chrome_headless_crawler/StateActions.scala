@@ -78,7 +78,7 @@ object StateActions {
 
     private def setCredentials(credentials: Option[Credentials], state: CrawlerState): LogEntry \/ Unit = {
       credentials match {
-        case None => \/-()
+        case None => \/-(())
         case Some(c) => state.session.setCredentials(c)
       }
     }

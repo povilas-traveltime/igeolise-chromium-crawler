@@ -20,4 +20,6 @@ libraryDependencies ++= Seq (
   "com.github.julien-truffaut"  %%  "monocle-macro"     % "1.5.0"
 )
 
+scalacOptions := Seq("-unchecked", "-deprecation")
+
 addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full)

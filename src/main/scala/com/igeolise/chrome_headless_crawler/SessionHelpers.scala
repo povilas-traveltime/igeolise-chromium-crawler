@@ -14,7 +14,7 @@ import io.webfolder.cdp.event.page.LifecycleEvent
 import io.webfolder.cdp.listener.EventListener
 import io.webfolder.cdp.session.Session
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Promise}
 import scalaz.\/
@@ -35,7 +35,7 @@ object SessionHelpers {
       \/.fromTryCatchNonFatal {
         val network = session.getCommand.getNetwork
         network.enable()
-        val headers: java.util.Map[String, Object] = Map[String, Object]("Authorization" -> ("Basic " + new String(Base64.getEncoder.encode(s"${credentials.user}:${credentials.password}".getBytes()))).asInstanceOf[Object])
+        val headers: java.util.Map[String, Object] = Map[String, Object]("Authorization" -> ("Basic " + new String(Base64.getEncoder.encode(s"${credentials.user}:${credentials.password}".getBytes()))).asInstanceOf[Object]).asJava
         network.setExtraHTTPHeaders(headers)
       }.leftMap(e => LogEntry(s"Failed to set credentials with message: ${e.getMessage}"))
     }
@@ -79,7 +79,7 @@ object SessionHelpers {
 
     def getNodeAttributes(nodeId: Int): LogEntry \/ Map[String, String]  = {
       \/.fromTryCatchNonFatal {
-        val attributeList = session.getDom().getAttributes(nodeId).toList
+        val attributeList = session.getDom().getAttributes(nodeId).asScala.toList
         attributeList.grouped(2).map { l => l.head -> l.tail.head }.toMap
       }.leftMap(_ => LogEntry("Failed to get node attributes"))
     }
