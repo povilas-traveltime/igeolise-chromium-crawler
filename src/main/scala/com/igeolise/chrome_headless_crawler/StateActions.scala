@@ -93,8 +93,7 @@ object StateActions {
     /**
       * Creates new scripts where each of the matching <element> is selected by an in action and ends execution of the current script
       * Emulates the behaviour of map or forEach
-      * @param element
-      * @return
+      * @param element element template for selection
       */
     def forAllElems(element: HtmlElement): CrawlerState = {
       (for {

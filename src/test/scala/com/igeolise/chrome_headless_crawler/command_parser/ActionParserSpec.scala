@@ -43,15 +43,17 @@ class ActionParserSpec extends Specification {
     val stringValueContinuous = "someString"
     val stringValueContinuousTail = Some(stringValueContinuous)
 
-    mustParse(In(element), "in", elementStringTail)
-    mustParse(TypeIn(stringValue), "typeIn", stringValueTail)
-    mustParse(Click, "click", None)
-    mustParse(ClickDownload, "clickDownload", None)
-    mustParse(NavigateTo(stringValueContinuous), "navigateTo", stringValueContinuousTail)
-    mustParse(NavigateToDownload("some:url", Some(Credentials("u", "p"))), "navigateToDownload", Some("some:url u p"))
-    mustParse(OnCurrentPage, "onCurrentPage", None)
-    mustParse(Up, "up", None)
-    mustParse(ForAllElems(element), "forAllElems", elementStringTail)
-    mustParse(FindContainingInLastResult(stringValue), "findContainingInLastResult", Some(stringValue))
+    import Action._
+
+    mustParse(In(element), inN, elementStringTail)
+    mustParse(TypeIn(stringValue), typeInN, stringValueTail)
+    mustParse(Click, clickN, None)
+    mustParse(ClickDownload, clickDownloadN, None)
+    mustParse(NavigateTo(stringValueContinuous), navitateToN, stringValueContinuousTail)
+    mustParse(NavigateToDownload("some:url", Some(Credentials("u", "p"))), navigateToDownloadN, Some("some:url u p"))
+    mustParse(OnCurrentPage, onCurrentPageN, None)
+    mustParse(Up, upN, None)
+    mustParse(InAll(element), inAllN, elementStringTail)
+    mustParse(FindContainingInLastResult(stringValue), findContainintInLastResultN, Some(stringValue))
   }
 }

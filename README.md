@@ -35,5 +35,5 @@ special cases:
 
 Discriminator: Since a discriminator is optional, it starts with a word "having" followed by a discriminator itself.
 
-discriminators: id, name, title, value, containsText
-special case: containsText searches for a substring contained in the whole element, including attributes.
+discriminators: id, name, title, value, text
+special case: text searches for a substring contained in the whole element, including attributes.

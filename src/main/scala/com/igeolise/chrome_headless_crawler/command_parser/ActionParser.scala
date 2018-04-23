@@ -1,7 +1,5 @@
 package com.igeolise.chrome_headless_crawler.command_parser
 
-import scala.Option
-
 object ActionParser {
   private val commandWithParam = "(\\w+) (.+)".r
   private val commandWithElement = "(\\w+) (\\S+)(?> (\\S+) (\\S+))?".r
@@ -20,7 +18,7 @@ object ActionParser {
         Some(NavigateToDownload(url, credentials))
       case "onCurrentPage" => Some(OnCurrentPage)
       case "up" => Some(Up)
-      case commandWithParam("forAllElems", HtmlElementParser(elem)) => Some(ForAllElems(elem))
+      case commandWithParam("inAll", HtmlElementParser(elem)) => Some(InAll(elem))
       case commandWithParam("findContainingInLastResult", text) =>
         Some(FindContainingInLastResult(text))
       case _ => None

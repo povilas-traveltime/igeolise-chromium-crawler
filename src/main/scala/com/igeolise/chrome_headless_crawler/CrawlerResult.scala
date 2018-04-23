@@ -7,10 +7,9 @@ object CrawlerResult {
   case class ScriptWithLog[A, B](script: B, log: A)
   case class FileWithLog[A](file: File, log: A)
 
-  sealed abstract class CrawlerSuccess
+  sealed trait CrawlerResult
 
-  case class Ok[A](downloaded: List[FileWithLog[A]]) extends CrawlerSuccess
-  case class WithFailures[A, B](downloaded: List[FileWithLog[A]], failed: List[ScriptWithLog[A, B]]) extends CrawlerSuccess
+  case class CrawlerResults[A, B](downloaded: List[FileWithLog[A]], failed: List[ScriptWithLog[A, B]]) extends CrawlerResult
 
-  case class CrawlerFailure(message: String)
+  case class CrawlerFailure(message: String) extends CrawlerResult
 }

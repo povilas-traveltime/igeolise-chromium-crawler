@@ -70,7 +70,7 @@ object SessionExtensions {
           val documentId = dom.getDocument().getNodeId
           dom.querySelectorAll(documentId, selector).asScala.map(_.toInt).toList
         }
-      }.leftMap(_ => LogEntry("Failed while getting node ids"))
+      }.leftMap(e => LogEntry(s"Failed while getting node ids\nException message: ${e.getMessage}"))
     }
 
 

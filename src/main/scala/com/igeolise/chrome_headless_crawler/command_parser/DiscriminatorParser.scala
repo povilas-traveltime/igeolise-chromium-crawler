@@ -11,7 +11,7 @@ object DiscriminatorParser {
           case "name" => Some(Name(value))
           case "title" => Some(Title(value))
           case "value" => Some(Value(value))
-          case "containsText" => Some(ContainsText(value))
+          case "text" => Some(Text(value))
           case _ => None
         }
       case _ => None

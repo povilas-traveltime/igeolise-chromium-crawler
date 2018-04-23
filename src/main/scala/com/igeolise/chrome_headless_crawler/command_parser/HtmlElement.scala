@@ -21,3 +21,11 @@ case class CustomSelector(selector: String) extends HtmlElement("customSelector"
   val discriminator = None
   override def toString: String = s"$elementName $selector"
 }
+
+object HtmlElement {
+//  Element name strings
+  val formN = "form"
+  val inputN = "input"
+  val anchorN = "anchor"
+  val divN = "div"
+}

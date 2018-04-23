@@ -29,10 +29,12 @@ class DiscriminatorParserSpec extends Specification {
 
     val value = "someValidValue"
 
-    mustParse(Id(value), "id", value)
-    mustParse(Name(value), "name", value)
-    mustParse(Title(value), "title", value)
-    mustParse(ContainsText(value), "containsText", value)
-    mustParse(Value(value), "value", value)
+    import Discriminator._
+
+    mustParse(Id(value), idN, value)
+    mustParse(Name(value), nameN, value)
+    mustParse(Title(value), titleN, value)
+    mustParse(Text(value), textN, value)
+    mustParse(Value(value), valueN, value)
   }
 }

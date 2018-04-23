@@ -11,7 +11,7 @@ object Selectors {
         case Name(value) => s"[name=$value]"
         case Title(value) => s"[title=$value]"
         case Value(value) => s"[value=$value]"
-        case ContainsText(value) => s":contains($value)"
+        case Text(value) => s":contains($value)"
       }
     }
   }

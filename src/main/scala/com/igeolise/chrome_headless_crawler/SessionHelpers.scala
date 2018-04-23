@@ -28,7 +28,7 @@ object SessionHelpers {
       \/.fromTryCatchNonFatal {
         val page = session.getCommand.getPage
         page.setDownloadBehavior(DownloadBehavior.Allow, target.getAbsolutePath)
-      }.leftMap(_ => LogEntry("Failed to set download behaviour"))
+      }.leftMap(e => LogEntry(s"Failed to set download behaviour\nException message: ${e.getMessage}"))
     }
 
     def setCredentials(credentials: Credentials): LogEntry \/ Unit = {
@@ -52,7 +52,7 @@ object SessionHelpers {
 
     def getDocumentNodeId(): LogEntry \/ Int = \/.fromTryCatchNonFatal(
       session.getDom().getDocument.getNodeId.toInt
-    ).leftMap(_ => LogEntry("Failed to get document node id"))
+    ).leftMap(e => LogEntry(s"Failed to get document node id\nException message: ${e.getMessage}"))
 
     def waitForPage(action: (Session) => Unit, timeout: FiniteDuration): LogEntry \/ Unit = {
       import  scala.concurrent.duration._
@@ -81,7 +81,7 @@ object SessionHelpers {
       \/.fromTryCatchNonFatal {
         val attributeList = session.getDom().getAttributes(nodeId).asScala.toList
         attributeList.grouped(2).map { l => l.head -> l.tail.head }.toMap
-      }.leftMap(_ => LogEntry("Failed to get node attributes"))
+      }.leftMap(e => LogEntry(s"Failed to get node attributes\nException message: ${e.getMessage}"))
     }
 
     private def createTempDir(prefix: String): LogEntry \/ File = {
@@ -91,7 +91,7 @@ object SessionHelpers {
 
     private def moveFiles(from: File, to: File): LogEntry \/ Unit = {
       \/.fromTryCatchNonFatal(Files.move(from.toPath, to.toPath)).map(_ => ())
-        .leftMap(_ => LogEntry(s"Failed while moving file from: ${from.getAbsolutePath} to: ${to.getAbsolutePath}"))
+        .leftMap(e => LogEntry(s"Failed while moving file from: ${from.getAbsolutePath} to: ${to.getAbsolutePath}\nException message: ${e.getMessage}"))
     }
 
     def download(action: (Session) => Unit, target: File, timeout: FiniteDuration): LogEntry \/ File = {
@@ -110,13 +110,13 @@ object SessionHelpers {
       \/.fromTryCatchNonFatal {
         session.getCommand.getDOM.focus(id, null, null)
         session
-      }.leftMap(_ => LogEntry(s"Failed to focus on element $id"))
+      }.leftMap(e => LogEntry(s"Failed to focus on element $id\nException message: ${e.getMessage}"))
     }
 
     def typeIn(text: String): LogEntry \/ Session = {
       \/.fromTryCatchNonFatal(
         session.sendKeys(text)
-      ).leftMap(_ => LogEntry(s"Failed to enter text: '$text'"))
+      ).leftMap(e => LogEntry(s"Failed to enter text: '$text'\nException message: ${e.getMessage}"))
     }
   }
 

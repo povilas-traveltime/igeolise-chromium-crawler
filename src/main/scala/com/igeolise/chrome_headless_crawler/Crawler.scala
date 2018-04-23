@@ -10,7 +10,6 @@ import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
 import com.igeolise.chrome_headless_crawler.model.ComposedLenses._
-
 import scalaz.syntax.id._
 
 class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
@@ -31,7 +30,7 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
     }
   }
 
-  def crawl(script: Script, downloadLocation: File): Either[CrawlerFailure, CrawlerSuccess] = {
+  def crawl(script: Script, downloadLocation: File): Either[CrawlerFailure, CrawlerResults[LazyLog, Script]] = {
     chromeSession.withSession { session =>
       val initialState = CrawlerStateFactory.createState(
         session,
@@ -40,8 +39,7 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
         timeout
       )
       val resultState = executeScripts(initialState)
-      if (resultState.failures.nonEmpty) WithFailures(resultState.successes, resultState.failures)
-      else Ok(resultState.successes)
+      CrawlerResults(resultState.successes, resultState.failures)
 
     } match {
       case Success(result) => Right(result)
@@ -73,7 +71,7 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
       case FindContainingInLastResult(text) => stateWithLog.findContainingInLastResult(text)
       case NavigateTo(url) => stateWithLog.navigateTo(url)
       case NavigateToDownload(url, credentials) => stateWithLog.navigateToDownload(url, credentials)
-      case ForAllElems(element) => stateWithLog.forAllElems(element)
+      case InAll(element) => stateWithLog.forAllElems(element)
     }) |> currentScriptL.modify(_.withNextAction)
   }
 }
