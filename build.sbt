@@ -5,7 +5,9 @@ name := "chrome-headless-crawler"
 
 version := "0.1.1-SNAPSHOT"
 
-scalaVersion := "2.12.4"
+scalaVersion := "2.11.7"
+
+crossScalaVersions := Seq("2.11.7", "2.12.4")
 
 scalacOptions in Test ++= Seq("-Yrangepos")
 
