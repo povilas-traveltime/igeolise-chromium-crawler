@@ -18,7 +18,7 @@ click                       - Sends a click command to the selected element (sta
 clickDownload               - Sends a click command to the selected element and awaits a download
 onCurrentPage               - Selects document root (clears all stack elements down to document root element)
 up                          - Selects a previously selected element (discards stack top)
-forAllElems <element>       - Selects multiple elements matching the <element> description for following action
+inAll <element>             - Selects multiple elements matching the <element> description for following action
     (the implementation simply unfolds the current script into multiple scripts replacing the current forAllElems action with `in` action)
 findContainingInLastResult <text> - Matches any leaf dom element that contains the <text> substring and clicks on them awaiting for a download.
 

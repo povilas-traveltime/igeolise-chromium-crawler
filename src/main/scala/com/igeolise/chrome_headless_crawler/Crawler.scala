@@ -4,22 +4,20 @@ import java.io.File
 
 import com.igeolise.chrome_headless_crawler.command_parser._
 import com.igeolise.chrome_headless_crawler.model._
-import org.slf4j.LoggerFactory
-
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
 import com.igeolise.chrome_headless_crawler.model.ComposedLenses._
+import scalaz.{-\/, \/, \/-}
 import scalaz.syntax.id._
 
-class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
+class Crawler(downloadLocation: File, timeout: FiniteDuration) {
   import CrawlerResult._
-
-  private val log = LoggerFactory.getLogger(classOf[Crawler])
 
   @tailrec
   private def executeScripts(state: CrawlerState): CrawlerState = {
-    state.unprocessedScripts match {
+    val firstState = executeScript(state)
+    firstState.unprocessedScripts match {
       case head :: tail =>
         val stateAfterExecution = state |>
           CrawlerState.scriptState.set(ScriptState(head, ElementStack(List.empty), LazyLog(s"Executing ${head.toString}"))) |>
@@ -30,10 +28,10 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
     }
   }
 
-  def crawl(script: Script, downloadLocation: File): Either[CrawlerFailure, CrawlerResults[LazyLog, Script]] = {
-    chromeSession.withSession { session =>
+  def crawl(script: Script): \/[CrawlerFailure, CrawlerResults[LazyLog, Script]] = {
+    ChromiumDriver.withDriver { driver =>
       val initialState = CrawlerStateFactory.createState(
-        session,
+        driver,
         script,
         downloadLocation,
         timeout
@@ -42,8 +40,8 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
       CrawlerResults(resultState.successes, resultState.failures)
 
     } match {
-      case Success(result) => Right(result)
-      case Failure(e) => Left(CrawlerFailure(e.getMessage))
+      case Success(result) => \/-(result)
+      case Failure(e) => -\/(CrawlerFailure(e.getMessage))
     }
   }
 
@@ -69,9 +67,9 @@ class Crawler(chromeSession: ChromeSession, timeout: FiniteDuration) {
       case Up => stateWithLog.up
       case TypeIn(text) => stateWithLog.typeIn(text)
       case FindContainingInLastResult(text) => stateWithLog.findContainingInLastResult(text)
-      case NavigateTo(url) => stateWithLog.navigateTo(url)
+      case NavigateTo(url) => stateWithLog.navigateTo(url, None)
       case NavigateToDownload(url, credentials) => stateWithLog.navigateToDownload(url, credentials)
-      case InAll(element) => stateWithLog.forAllElems(element)
+      case InAll(element) => stateWithLog.inAll(element)
     }) |> currentScriptL.modify(_.withNextAction)
   }
 }
