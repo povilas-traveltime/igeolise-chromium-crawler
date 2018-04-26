@@ -23,6 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 import com.igeolise.geoliser.utils.Resourceful.acquire
 import com.igeolise.geoliser.utils.TempDirResource
+import org.apache.commons.io.FileUtils
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -30,6 +31,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ChromiumDriver(chromeOptions: ChromeOptions = ChromiumDriver.defaultOptions)
   extends AutoCloseable with ChromiumDriverActions {
 
+  val chromeDriverFile = FileUtils.toFile(getClass.getResource("/bin/chromedriver"))
+  chromeDriverFile.setExecutable(true)
+  System.setProperty("webdriver.chrome.driver", chromeDriverFile.getAbsolutePath)
   val (service, driver) = createDriver(chromeOptions)
 
   override def close(): Unit = {
@@ -119,16 +123,12 @@ class ChromiumDriver(chromeOptions: ChromeOptions = ChromiumDriver.defaultOption
 
   import scala.collection.JavaConverters._
   def waitForPage(work: () => String \/ Unit) (implicit timeout: FiniteDuration): String \/ Unit = {
-    println("waitingForPage")
     val doneWork = work()
     val future = Future {
       def logs = driver.manage().logs().get(LogType.PERFORMANCE)
       def checkLoadingDone(allMessages: Seq[SLogEntry]) = {
-        val messages = allMessages.takeRight(3).map(l => Json.parse(l.getMessage))
-        println(messages.map(_("message")("method").toString()).mkString("\n\t"))
-        val cond = messages.exists(_("message")("method").toString().contains("Page.frameStoppedLoading"))
-        println(cond)
-        cond
+        allMessages.takeRight(3).map(l => Json.parse(l.getMessage))
+          .exists(_("message")("method").toString().contains("Page.frameStoppedLoading"))
       }
       do {
         Thread.sleep(100)
