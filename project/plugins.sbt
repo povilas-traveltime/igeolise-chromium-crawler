@@ -1,4 +1,4 @@
-addSbtPlugin("com.igeolise.sbt" % "artifactory-plugin" % "1.2.1")
+addSbtPlugin("com.igeolise.sbt" % "artifactory-plugin" % "1.2.2")
 
 resolvers := Seq(
   "iGeolise releases" at "https://artifactory.igeolise.com/artifactory/libs-release",
