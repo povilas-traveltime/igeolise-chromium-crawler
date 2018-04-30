@@ -23,16 +23,13 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 import com.igeolise.geoliser.utils.Resourceful.acquire
 import com.igeolise.geoliser.utils.TempDirResource
-import org.apache.commons.io.FileUtils
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ChromiumDriver(chromeOptions: ChromeOptions = ChromiumDriver.defaultOptions)
+class ChromiumDriver(chromeDriverFile: File, chromeOptions: ChromeOptions = ChromiumDriver.defaultOptions)
   extends AutoCloseable with ChromiumDriverActions {
 
-  val chromeDriverFile = FileUtils.toFile(getClass.getResource("/bin/chromedriver"))
-  chromeDriverFile.setExecutable(true)
   System.setProperty("webdriver.chrome.driver", chromeDriverFile.getAbsolutePath)
   val (service, driver) = createDriver(chromeOptions)
 
@@ -189,9 +186,9 @@ object ChromiumDriver {
     options.setExperimentalOption("prefs", prefs)
   }
 
-  def withDriver[A](work: ChromiumDriver => A): Try[A] = {
+  def withDriver[A](chromeDriverFile: File)(work: ChromiumDriver => A): Try[A] = {
     Try { ResourceScope { implicit scope =>
-      work(acquire(new ChromiumDriver()))
+      work(acquire(new ChromiumDriver(chromeDriverFile)))
     } }
   }
 }

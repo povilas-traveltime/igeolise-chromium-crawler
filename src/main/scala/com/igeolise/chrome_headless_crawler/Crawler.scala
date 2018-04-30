@@ -11,7 +11,7 @@ import com.igeolise.chrome_headless_crawler.model.ComposedLenses._
 import scalaz.{-\/, \/, \/-}
 import scalaz.syntax.id._
 
-class Crawler(downloadLocation: File, timeout: FiniteDuration) {
+class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDuration) {
   import CrawlerResult._
 
   @tailrec
@@ -29,7 +29,7 @@ class Crawler(downloadLocation: File, timeout: FiniteDuration) {
   }
 
   def crawl(script: Script): \/[CrawlerFailure, CrawlerResults[LazyLog, Script]] = {
-    ChromiumDriver.withDriver { driver =>
+    ChromiumDriver.withDriver(chromeDriverFile) { driver =>
       val initialState = CrawlerStateFactory.createState(
         driver,
         script,

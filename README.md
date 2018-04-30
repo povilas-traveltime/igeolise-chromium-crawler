@@ -2,7 +2,7 @@ A script parser and interpreter web crawler library.
 
 Parses a string of commands and crawls the web according to the script using an instance of chrome/chromium browser.
 
-Requires for chrome/chromium to be installed.
+Requires for chrome/chromium to be installed and a chromedriver exebutable given as a parameter.
 
 Script syntax: actions seperated by a `\`
 
