@@ -175,7 +175,7 @@ object ChromiumDriver {
 
   def setHeadlessOptions(options: ChromeOptions): ChromeOptions = {
     options.setHeadless(true)
-    options.addArguments("--test-type", "--disable-extensions")
+    options.addArguments("--disable-extensions", "--window-size=1280,1024", "--no-sandbox", "--disable-popup-blocking")
     options
   }
 

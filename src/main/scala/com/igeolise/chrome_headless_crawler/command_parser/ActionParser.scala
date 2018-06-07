@@ -2,6 +2,7 @@ package com.igeolise.chrome_headless_crawler.command_parser
 
 object ActionParser {
   private val commandWithParam = "(\\w+) (.+)".r
+  private val commandWithNumber = "(\\w+) (\\d+)".r
   private val commandWithElement = "(\\w+) (\\S+)(?> (\\S+) (\\S+))?".r
   def unapply(command: String): Option[Action] = {
     command match {
@@ -21,6 +22,8 @@ object ActionParser {
       case commandWithParam("inAll", HtmlElementParser(elem)) => Some(InAll(elem))
       case commandWithParam("findContainingInLastResult", text) =>
         Some(FindContainingInLastResult(text))
+      case commandWithNumber("waitSeconds", seconds) => Some(WaitSeconds(seconds.toInt))
+      case commandWithParam("findLatestWithPrefix", prefix) => Some(FindLatestWithPrefix(prefix))
       case _ => None
     }
   }

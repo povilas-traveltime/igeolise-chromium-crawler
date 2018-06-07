@@ -1,6 +1,7 @@
 package com.igeolise.chrome_headless_crawler
 
 import java.io.File
+
 import com.igeolise.chrome_headless_crawler.CrawlerResult.ScriptWithLog
 import com.igeolise.chrome_headless_crawler.command_parser.{Credentials, HtmlElement, In}
 import com.igeolise.chrome_headless_crawler.model.{CrawlerState, ElementStack, LogEntry, ScriptState}
@@ -22,14 +23,14 @@ object StateActions {
     implicit def timeout = state.timeout
 
     def in(element: HtmlElement): CrawlerState = {
-      state.driver.getElement(element.toSelectorString).leftMap(LogEntry) |>
+      state.scriptState.elementStack.pop.flatMap { case (element_, _) => element_.findElementByXpath(element.toSelectorString).leftMap(LogEntry) } |>
       handleEither(e => elementStackL.modify(_.push(e)))
     }
 
     def click(): CrawlerState = {
       (for {
         elemAndStack  <- state.scriptState.elementStack.pop
-        _             <- state.driver.waitForPage(elemAndStack._1.clickDisjunction).leftMap(LogEntry)
+        _             <- state.driver.waitForPage(() => elemAndStack._1.clickDisjunction(state.driver.driver)).leftMap(LogEntry)
       } yield elemAndStack._2) |>
       handleEither(elementStackL.set)
     }
@@ -47,15 +48,16 @@ object StateActions {
     }
 
     def findContainingInLastResult(text: String): CrawlerState = {
-      state.driver.getElements(s"a:contains('$text')").leftMap(LogEntry)
-        .map(_.foreach(e => state.driver.download(e.clickDisjunction, state.target)
-      )) |> handleEither(_ => identity)
+      (for {
+        elements <- state.scriptState.elementStack.pop.flatMap{ case (element, stack) => element.findElementsByXpath(s"""//a[contains(@*, '$text') or contains(text(), '$text')]""").leftMap(LogEntry)}
+        downloaded <- elements.map(e => state.driver.download(() => e.clickDisjunction(state.driver.driver), state.target)).sequenceU.leftMap(LogEntry)
+      } yield downloaded.flatten.map(f => FileWithLog(f, state.scriptState.log))) |> handleEither(results => CrawlerState.successes.modify(_ ++ results))
     }
 
     def clickDownload(): CrawlerState = {
       (for {
         elementAndStack <- state.scriptState.elementStack.pop
-        download        <- state.driver.download(elementAndStack._1.clickDisjunction, state.target).leftMap(LogEntry)
+        download        <- state.driver.download(() => elementAndStack._1.clickDisjunction(state.driver.driver), state.target).leftMap(LogEntry)
       } yield download) |> handleEither(addDownloadToState) _ // explicit conversion to a function
     }
 
@@ -98,10 +100,11 @@ object StateActions {
       */
     def inAll(element: HtmlElement): CrawlerState = {
       (for {
-        elements    <- state.driver.getElements(element.toSelectorString)
-        attributes  <- elements.map(getElementAttributes).sequenceU
-        newElements <- \/-(attributes.map(a => Selectors.attributesToElement(a)))
-      } yield newElements).leftMap(LogEntry) |> handleEither {e: List[HtmlElement] => { s: CrawlerState =>
+        stackAndElement <- state.scriptState.elementStack.pop
+        elements        <- stackAndElement._1.findElementsByXpath(element.toSelectorString).leftMap(LogEntry)
+        attributes      <- elements.map(e => getElementAttributes(e).map(a => a -> e)).sequenceU.leftMap(LogEntry)
+        newElements     <- \/-(attributes.map { case (attributes_, element_) => Selectors.attributesToElement(attributes_, element_.getTagName)})
+      } yield newElements) |> handleEither {e: List[HtmlElement] => { s: CrawlerState =>
         s.expandScriptWithElements(e) |> currentScriptL.modify(_.endScript)
       } }
     }
@@ -118,6 +121,21 @@ object StateActions {
     def up: CrawlerState = {
       state.scriptState.elementStack.pop.map(_._2) |>
       handleEither(s => elementStackL.set(s))
+    }
+
+    def waitSeconds(duration: Int): CrawlerState = {
+      Thread.sleep(duration * 1000)
+      state |> scriptLogL.modify(_.append(LogEntry(s"Waiting $duration seconds.")))
+    }
+
+    def findLatestWithPrefix(prefix: String): CrawlerState = {
+      (for {
+        elementAndStack           <- state.scriptState.elementStack.pop
+        foundElements             <- elementAndStack._1.findElementsByXpath("//a").leftMap(LogEntry)
+        filteredElementsAndHrefs  <- \/.fromTryCatchNonFatal(foundElements.map( e => e.getAttribute("href") -> e).filter(_._1.startsWith(prefix))).leftMap(_ => LogEntry("Error while filtering elements."))
+        resultElement             <- \/.fromTryCatchNonFatal(filteredElementsAndHrefs.maxBy { case (href, element) => href.stripPrefix(prefix) }._2).leftMap(_ => LogEntry("Specified element not found."))
+        download                  <- state.driver.download(() => resultElement.clickDisjunction(state.driver.driver), state.target).leftMap(LogEntry)
+      } yield download) |> handleEither(addDownloadToState) _ // explicit conversion to function
     }
 
     private def handleEither[A](modification: A => (CrawlerState => CrawlerState))

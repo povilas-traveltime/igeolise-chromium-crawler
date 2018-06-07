@@ -3,7 +3,7 @@ organization := "com.igeolise"
 
 name := "chrome-headless-crawler"
 
-version := "0.1.3"
+version := "0.1.5-SNAPSHOT"
 
 scalaVersion := "2.11.7"
 
