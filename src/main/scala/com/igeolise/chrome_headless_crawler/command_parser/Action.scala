@@ -26,6 +26,8 @@ case class InAll(element: HtmlElement) extends Action(inAllN) with withElement
 case class FindContainingInLastResult(text: String) extends Action(findContainintInLastResultN) {
   override def toString: String = s"$actionName $text"
 }
+case class WaitSeconds(seconds: Int) extends Action(waitSecondsN)
+case class FindLatestWithPrefix(prefix: String) extends Action(findLatestWithPrefixN)
 
 case class Credentials(user: String, password: String)
 
@@ -41,4 +43,6 @@ object Action {
   val upN = "up"
   val inAllN = "inAll"
   val findContainintInLastResultN = "findContainingInLastResult"
+  val waitSecondsN = "waitSeconds"
+  val findLatestWithPrefixN = "findLatestWithPrefix"
 }

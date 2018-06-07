@@ -21,6 +21,7 @@ up                          - Selects a previously selected element (discards st
 inAll <element>             - Selects multiple elements matching the <element> description for following action
     (the implementation simply unfolds the current script into multiple scripts replacing the current forAllElems action with `in` action)
 findContainingInLastResult <text> - Matches any leaf dom element that contains the <text> substring and clicks on them awaiting for a download.
+findLatestWithPrefex <text> - searches for anchor elements (<a> tag) which contain the specified prefix in its href attribute and selects the latest by comparing the tail of the string alphanumerically.
 
 Elements:
 
@@ -31,7 +32,7 @@ examples:
 
 special cases:
     anyElement - matches any element, best use when an element type is unknownt but can be identified by an attribute.
-    customSelector <value> - <value> can be any CSS selector.
+    customSelector <value> - <value> can be any XPath selector.
 
 Discriminator: Since a discriminator is optional, it starts with a word "having" followed by a discriminator itself.
 

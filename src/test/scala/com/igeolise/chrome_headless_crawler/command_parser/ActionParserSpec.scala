@@ -55,5 +55,7 @@ class ActionParserSpec extends Specification {
     mustParse(Up, upN, None)
     mustParse(InAll(element), inAllN, elementStringTail)
     mustParse(FindContainingInLastResult(stringValue), findContainintInLastResultN, Some(stringValue))
+    mustParse(WaitSeconds(10), waitSecondsN, Some("10"))
+    mustParse(FindLatestWithPrefix(stringValue), findLatestWithPrefixN, Some(stringValue))
   }
 }

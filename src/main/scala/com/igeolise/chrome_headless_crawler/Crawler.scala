@@ -70,6 +70,8 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
       case NavigateTo(url) => stateWithLog.navigateTo(url, None)
       case NavigateToDownload(url, credentials) => stateWithLog.navigateToDownload(url, credentials)
       case InAll(element) => stateWithLog.inAll(element)
+      case WaitSeconds(secs) => stateWithLog.waitSeconds(secs)
+      case FindLatestWithPrefix(prefix) => stateWithLog.findLatestWithPrefix(prefix)
     }) |> currentScriptL.modify(_.withNextAction)
   }
 }

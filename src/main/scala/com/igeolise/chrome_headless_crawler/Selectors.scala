@@ -7,18 +7,18 @@ object Selectors {
   implicit class DiscriminatorExt(val discriminator: Discriminator) extends AnyVal {
     def toSelectorString: String = {
       discriminator match {
-        case Id(value) => s"[id=$value]"
-        case Name(value) => s"[name=$value]"
-        case Title(value) => s"[title=$value]"
-        case Value(value) => s"[value=$value]"
-        case Text(value) => s":contains($value)"
+        case Id(value) => s"""[@id='$value']"""
+        case Name(value) => s"""[@name='$value']"""
+        case Title(value) => s"""[@title='$value']"""
+        case Value(value) => s"""[@value='$value']"""
+        case Text(value) => s"""[contains(@*, '$value') or contains(text(), '$value')]"""
       }
     }
   }
 
   implicit class HtmlElementExt(val element: HtmlElement) extends AnyVal {
     def toSelectorString: String = {
-      (element match {
+      "//" + (element match {
         case CustomSelector(s) => s
         case Form(_) => "form"
         case Input(_) => "input"
@@ -34,11 +34,11 @@ object Selectors {
     }
   }
 
-  def attributesToElement(attributes: Map[String, String]): HtmlElement = {
-    val textContentSelector = attributes.get("textContent").map(t => s"textContent='$t'").getOrElse("")
-    val hrefSelector = attributes.get("href").map("href=" + _).getOrElse("")
-    val idSelector = attributes.get("id").map("id" + _).getOrElse("")
-    val combined = Seq(textContentSelector, hrefSelector, idSelector).mkString(",")
-    CustomSelector(s"*[$combined]")
+  def attributesToElement(attributes: Map[String, String], tagValue: String): CustomSelector = {
+    val textContentSelector = attributes.get("textContent").map(t => s"text()='$t'")
+    val hrefSelector = attributes.get("href").map(t => s"@href='$t'")
+    val idSelector = attributes.get("id").map(t => "@id='$t'")
+    val combined = Seq(textContentSelector, hrefSelector, idSelector).flatten.mkString(" and ")
+    CustomSelector(s"$tagValue[$combined]")
   }
 }
