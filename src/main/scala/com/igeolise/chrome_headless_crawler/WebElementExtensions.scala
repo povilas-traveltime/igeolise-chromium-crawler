@@ -9,7 +9,8 @@ import scala.collection.JavaConverters._
 object WebElementExtensions {
   implicit class WebElementExt(val element: WebElement) extends AnyVal {
     def clickDisjunction(driver: WebDriver): String \/ Unit = \/.fromTryCatchNonFatal {
-      driver.asInstanceOf[JavascriptExecutor].executeScript("arguments[0].removeAttribute('target')", element)
+      if (element.getAttribute("target") != "_self")
+        driver.asInstanceOf[JavascriptExecutor].executeScript("arguments[0].removeAttribute('target')", element)
       element.click()
   }.leftMap(e => s"Unable to click on element, cause: ${e.getMessage}")
 
