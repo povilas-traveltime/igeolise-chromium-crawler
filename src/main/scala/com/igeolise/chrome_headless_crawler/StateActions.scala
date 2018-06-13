@@ -32,7 +32,15 @@ object StateActions {
         elemAndStack  <- state.scriptState.elementStack.pop
         _             <- state.driver.waitForPage(() => elemAndStack._1.clickDisjunction(state.driver.driver)).leftMap(LogEntry)
       } yield elemAndStack._2) |>
-      handleEither(elementStackL.set)
+      handleEither(elementStackL.set) _ // explicit conversion to function
+    }
+
+    def clickNoWait(): CrawlerState = {
+      (for {
+        elemAndStack  <- state.scriptState.elementStack.pop
+        _             <- elemAndStack._1.clickDisjunction(state.driver.driver).leftMap(LogEntry)
+      } yield elemAndStack._2) |>
+        handleEither(elementStackL.set) _ // explicit conversion to function
     }
 
     def onCurrentPage(): CrawlerState = {
@@ -49,8 +57,8 @@ object StateActions {
 
     def findContainingInLastResult(text: String): CrawlerState = {
       (for {
-        elements <- state.scriptState.elementStack.pop.flatMap{ case (element, stack) => element.findElementsByXpath(s"""//a[contains(@*, '$text') or contains(text(), '$text')]""").leftMap(LogEntry)}
-        downloaded <- elements.map(e => state.driver.download(() => e.clickDisjunction(state.driver.driver), state.target)).sequenceU.leftMap(LogEntry)
+        elements    <- state.scriptState.elementStack.pop.flatMap{ case (element, stack) => element.findElementsByXpath(s"""//a[contains(@*, '$text') or contains(text(), '$text')]""").leftMap(LogEntry)}
+        downloaded  <- elements.map(e => state.driver.download(() => e.clickDisjunction(state.driver.driver), state.target)).sequenceU.leftMap(LogEntry)
       } yield downloaded.flatten.map(f => FileWithLog(f, state.scriptState.log))) |> handleEither(results => CrawlerState.successes.modify(_ ++ results))
     }
 

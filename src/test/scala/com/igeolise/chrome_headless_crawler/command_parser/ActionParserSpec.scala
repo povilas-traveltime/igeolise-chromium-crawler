@@ -48,6 +48,7 @@ class ActionParserSpec extends Specification {
     mustParse(In(element), inN, elementStringTail)
     mustParse(TypeIn(stringValue), typeInN, stringValueTail)
     mustParse(Click, clickN, None)
+    mustParse(ClickNoWait, clickNoWaitN, None)
     mustParse(ClickDownload, clickDownloadN, None)
     mustParse(NavigateTo(stringValueContinuous), navitateToN, stringValueContinuousTail)
     mustParse(NavigateToDownload("some:url", Some(Credentials("u", "p"))), navigateToDownloadN, Some("some:url u p"))

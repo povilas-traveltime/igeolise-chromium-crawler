@@ -9,6 +9,7 @@ object ActionParser {
       case commandWithParam("in", HtmlElementParser(element)) => Some(In(element))
       case commandWithParam("typeIn", text) => Some(TypeIn(text))
       case "click" => Some(Click)
+      case "clickNoWait" => Some(ClickNoWait)
       case "clickDownload" => Some(ClickDownload)
       case commandWithParam("navigateTo", url) => Some(NavigateTo(url))
       case commandWithElement("navigateToDownload", url, uName, pass) =>

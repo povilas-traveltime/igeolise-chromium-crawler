@@ -62,6 +62,7 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
     (action match {
       case In(element) => stateWithLog.in(element)
       case Click => stateWithLog.click()
+      case ClickNoWait => stateWithLog.clickNoWait()
       case ClickDownload => stateWithLog.clickDownload()
       case OnCurrentPage => stateWithLog.onCurrentPage()
       case Up => stateWithLog.up
