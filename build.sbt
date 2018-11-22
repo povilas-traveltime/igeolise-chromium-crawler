@@ -3,11 +3,11 @@ organization := "com.igeolise"
 
 name := "chrome-headless-crawler"
 
-version := "0.1.7"
+version := "0.1.8"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.12.7"
 
-crossScalaVersions := Seq("2.11.7", "2.12.4")
+crossScalaVersions := Seq("2.11.12", "2.12.7")
 
 scalacOptions in Test ++= Seq("-Yrangepos")
 
