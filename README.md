@@ -34,6 +34,7 @@ examples:
 special cases:
     anyElement - matches any element, best use when an element type is unknownt but can be identified by an attribute.
     customSelector <value> - <value> can be any XPath selector.
+    customElement <element name> [<discriminator>] - finds an element with a tag of "element name". The element name must be a single word, accepted characters are "a-Z0-9_-".
 
 Discriminator: Since a discriminator is optional, it starts with a word "having" followed by a discriminator itself.
 
