@@ -140,14 +140,27 @@ object StateActions {
       (for {
         elementAndStack           <- state.scriptState.elementStack.pop
         foundElements             <- elementAndStack._1.findElementsByXpath("//a").leftMap(LogEntry)
-        filteredElementsAndHrefs  <- filterElements(foundElements, _.getAttribute("href").contains(prefix))
-        resultElement             <- \/.fromTryCatchNonFatal(filteredElementsAndHrefs.maxBy { e => e.getAttribute("href").stripPrefix(prefix) }).leftMap(_ => LogEntry("Specified element not found."))
+        filteredElements  <- filterElements(foundElements, "href", _.contains(prefix))
+        resultElement             <- \/.fromTryCatchNonFatal(filteredElements.maxBy { e => cutToTail(e.getAttribute("href"), prefix) }).leftMap(_ => LogEntry("Specified element not found."))
         download                  <- state.driver.download(() => resultElement.clickDisjunction(state.driver.driver), state.target).leftMap(LogEntry)
       } yield download) |> handleEither(addDownloadToState) _ // explicit conversion to function
     }
 
-    private def filterElements(elements: Traversable[WebElement], predicate: WebElement => Boolean): LogEntry \/ List[WebElement] =
-      \/.fromTryCatchNonFatal(elements.filter(e => e != null && predicate(e)).toList).leftMap(e => LogEntry(s"Error while filterin elements, message: ${e.getMessage}"))
+    /***
+      * Finds the last occurance of @slice and drops everything before its end (including the slice).
+      */
+    private def cutToTail(input: String, slice: String): String = {
+      val startOfPrefix = input.lastIndexOf(slice)
+      input.drop(startOfPrefix).stripPrefix(slice)
+    }
+
+    private def filterElements(elements: Traversable[WebElement], attributeName: String, predicate: String => Boolean): LogEntry \/ List[WebElement] = {
+      elements.foreach(e => println(e.getAttribute("href")))
+      \/.fromTryCatchNonFatal(elements.filter{ e =>
+        val attribute = e.getAttribute(attributeName)
+        attribute != null && predicate(attribute)
+      }.toList).leftMap(e => LogEntry(s"Error while filtering elements, message: ${e.getMessage}"))
+    }
 
     private def handleEither[A](modification: A => (CrawlerState => CrawlerState))
       (result: LogEntry \/ A): CrawlerState = {
