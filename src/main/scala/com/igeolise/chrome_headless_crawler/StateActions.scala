@@ -155,7 +155,6 @@ object StateActions {
     }
 
     private def filterElements(elements: Traversable[WebElement], attributeName: String, predicate: String => Boolean): LogEntry \/ List[WebElement] = {
-      elements.foreach(e => println(e.getAttribute("href")))
       \/.fromTryCatchNonFatal(elements.filter{ e =>
         val attribute = e.getAttribute(attributeName)
         attribute != null && predicate(attribute)
