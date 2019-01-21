@@ -140,11 +140,14 @@ object StateActions {
       (for {
         elementAndStack           <- state.scriptState.elementStack.pop
         foundElements             <- elementAndStack._1.findElementsByXpath("//a").leftMap(LogEntry)
-        filteredElementsAndHrefs  <- \/.fromTryCatchNonFatal(foundElements.map( e => e.getAttribute("href") -> e).filter(_._1.startsWith(prefix))).leftMap(_ => LogEntry("Error while filtering elements."))
-        resultElement             <- \/.fromTryCatchNonFatal(filteredElementsAndHrefs.maxBy { case (href, element) => href.stripPrefix(prefix) }._2).leftMap(_ => LogEntry("Specified element not found."))
+        filteredElementsAndHrefs  <- filterElements(foundElements, _.getAttribute("href").contains(prefix))
+        resultElement             <- \/.fromTryCatchNonFatal(filteredElementsAndHrefs.maxBy { e => e.getAttribute("href").stripPrefix(prefix) }).leftMap(_ => LogEntry("Specified element not found."))
         download                  <- state.driver.download(() => resultElement.clickDisjunction(state.driver.driver), state.target).leftMap(LogEntry)
       } yield download) |> handleEither(addDownloadToState) _ // explicit conversion to function
     }
+
+    private def filterElements(elements: Traversable[WebElement], predicate: WebElement => Boolean): LogEntry \/ List[WebElement] =
+      \/.fromTryCatchNonFatal(elements.filter(e => e != null && predicate(e)).toList).leftMap(e => LogEntry(s"Error while filterin elements, message: ${e.getMessage}"))
 
     private def handleEither[A](modification: A => (CrawlerState => CrawlerState))
       (result: LogEntry \/ A): CrawlerState = {
