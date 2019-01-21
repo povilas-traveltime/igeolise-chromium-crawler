@@ -51,5 +51,6 @@ class HtmlElementParserSpec extends Specification {
     mustParse(AnyElement(None), "anyElement")
     mustParse(Paragraph(None), "paragraph")
     mustParse(CustomSelector("tt"), "customSelector tt")
+    mustParse(CustomElement("someName", None), "customElement someName")
   }
 }

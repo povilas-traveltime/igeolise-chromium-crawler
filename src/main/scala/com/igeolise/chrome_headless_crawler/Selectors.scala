@@ -20,6 +20,7 @@ object Selectors {
     def toSelectorString: String = {
       "//" + (element match {
         case CustomSelector(s) => s
+        case CustomElement(name, _) => name
         case Form(_) => "form"
         case Input(_) => "input"
         case Anchor(_) => "a"
