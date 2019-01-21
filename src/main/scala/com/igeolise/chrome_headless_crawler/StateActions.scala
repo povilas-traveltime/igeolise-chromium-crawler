@@ -140,10 +140,25 @@ object StateActions {
       (for {
         elementAndStack           <- state.scriptState.elementStack.pop
         foundElements             <- elementAndStack._1.findElementsByXpath("//a").leftMap(LogEntry)
-        filteredElementsAndHrefs  <- \/.fromTryCatchNonFatal(foundElements.map( e => e.getAttribute("href") -> e).filter(_._1.startsWith(prefix))).leftMap(_ => LogEntry("Error while filtering elements."))
-        resultElement             <- \/.fromTryCatchNonFatal(filteredElementsAndHrefs.maxBy { case (href, element) => href.stripPrefix(prefix) }._2).leftMap(_ => LogEntry("Specified element not found."))
+        filteredElements  <- filterElements(foundElements, "href", _.contains(prefix))
+        resultElement             <- \/.fromTryCatchNonFatal(filteredElements.maxBy { e => cutToTail(e.getAttribute("href"), prefix) }).leftMap(_ => LogEntry("Specified element not found."))
         download                  <- state.driver.download(() => resultElement.clickDisjunction(state.driver.driver), state.target).leftMap(LogEntry)
       } yield download) |> handleEither(addDownloadToState) _ // explicit conversion to function
+    }
+
+    /***
+      * Finds the last occurance of @slice and drops everything before its end (including the slice).
+      */
+    private def cutToTail(input: String, slice: String): String = {
+      val startOfPrefix = input.lastIndexOf(slice)
+      input.drop(startOfPrefix).stripPrefix(slice)
+    }
+
+    private def filterElements(elements: Traversable[WebElement], attributeName: String, predicate: String => Boolean): LogEntry \/ List[WebElement] = {
+      \/.fromTryCatchNonFatal(elements.filter{ e =>
+        val attribute = e.getAttribute(attributeName)
+        attribute != null && predicate(attribute)
+      }.toList).leftMap(e => LogEntry(s"Error while filtering elements, message: ${e.getMessage}"))
     }
 
     private def handleEither[A](modification: A => (CrawlerState => CrawlerState))
