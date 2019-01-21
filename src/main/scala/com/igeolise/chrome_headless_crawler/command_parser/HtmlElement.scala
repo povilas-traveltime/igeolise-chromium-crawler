@@ -21,6 +21,7 @@ case class CustomSelector(selector: String) extends HtmlElement("customSelector"
   val discriminator = None
   override def toString: String = s"$elementName $selector"
 }
+case class CustomElement(name: String, discriminator: Option[Discriminator]) extends HtmlElement(name)
 
 object HtmlElement {
 //  Element name strings
