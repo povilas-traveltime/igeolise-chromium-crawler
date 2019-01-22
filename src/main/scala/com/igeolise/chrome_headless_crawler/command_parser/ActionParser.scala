@@ -28,7 +28,7 @@ object ActionParser {
       case commandWithParam("findLatestWithPrefix", prefix) => Some(FindLatestWithPrefix(prefix))
       case commandWithElementAndSubstring("findLatestByInnerText", HtmlElementParser(element), substring) =>
         Some(FindLatestByInnerText(element, substring))
-      case _ => println("none?"); None
+      case _ => None
     }
   }
 }
