@@ -12,6 +12,7 @@ case class Name(value: String) extends Discriminator(nameN)
 case class Title(value: String) extends Discriminator(titleN)
 case class Text(value: String) extends Discriminator(textN)
 case class Value(value: String) extends Discriminator(valueN)
+case class Href(value: String) extends Discriminator(hrefN)
 
 object Discriminator {
 //  Discriminator name strings
@@ -20,4 +21,5 @@ object Discriminator {
   val titleN = "title"
   val textN = "text"
   val valueN = "value"
+  val hrefN = "href"
 }

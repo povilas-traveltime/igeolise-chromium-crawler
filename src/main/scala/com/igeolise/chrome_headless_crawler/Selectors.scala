@@ -11,6 +11,7 @@ object Selectors {
         case Name(value) => s"""[@name='$value']"""
         case Title(value) => s"""[@title='$value']"""
         case Value(value) => s"""[@value='$value']"""
+        case Href(value) => s"""[@href='$value']"""
         case Text(value) => s"""[contains(@*, '$value') or contains(text(), '$value')]"""
       }
     }
@@ -38,7 +39,7 @@ object Selectors {
   def attributesToElement(attributes: Map[String, String], tagValue: String): CustomSelector = {
     val textContentSelector = attributes.get("textContent").map(t => s"text()='$t'")
     val hrefSelector = attributes.get("href").map(t => s"@href='$t'")
-    val idSelector = attributes.get("id").map(t => "@id='$t'")
+    val idSelector = attributes.get("id").map(t => s"@id='$t'")
     val combined = Seq(textContentSelector, hrefSelector, idSelector).flatten.mkString(" and ")
     CustomSelector(s"$tagValue[$combined]")
   }

@@ -12,6 +12,7 @@ object DiscriminatorParser {
           case "title" => Some(Title(value))
           case "value" => Some(Value(value))
           case "text" => Some(Text(value))
+          case "href" => Some(Href(value))
           case _ => None
         }
       case _ => None
