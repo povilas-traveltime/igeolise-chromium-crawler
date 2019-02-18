@@ -29,7 +29,7 @@ case class FindContainingInLastResult(text: String) extends Action(findContainin
 }
 case class WaitSeconds(seconds: Int) extends Action(waitSecondsN)
 case class FindLatestWithPrefix(prefix: String) extends Action(findLatestWithPrefixN)
-case class FindLatestByInnerText(element: HtmlElement, prefix: String) extends Action(findLatestByInnerTextN)
+case class FindLatestByInnerText(element: HtmlElement, substring: String) extends Action(findLatestByInnerTextN)
 
 case class Credentials(user: String, password: String)
 

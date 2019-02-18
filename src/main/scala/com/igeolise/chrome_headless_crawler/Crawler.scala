@@ -73,7 +73,7 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
       case InAll(element) => stateWithLog.inAll(element)
       case WaitSeconds(secs) => stateWithLog.waitSeconds(secs)
       case FindLatestWithPrefix(prefix) => stateWithLog.findLatestWithPrefix(prefix)
-      case FindLatestByInnerText(element, prefix) => stateWithLog.findLatestByInnerText(element, prefix)
+      case FindLatestByInnerText(element, substring) => stateWithLog.findLatestByInnerText(element, substring)
     }) |> currentScriptL.modify(_.withNextAction)
   }
 }

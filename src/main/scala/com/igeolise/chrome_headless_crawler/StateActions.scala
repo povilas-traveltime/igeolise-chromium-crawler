@@ -137,12 +137,12 @@ object StateActions {
       state |> scriptLogL.modify(_.append(LogEntry(s"Waiting $duration seconds.")))
     }
 
-    def findLatestByInnerText(element: HtmlElement, prefix: String): CrawlerState = {
+    def findLatestByInnerText(element: HtmlElement, substring: String): CrawlerState = {
       (for {
         elementAndStack   <- state.scriptState.elementStack.pop
         foundElements     <- elementAndStack._1.findElementsByXpath(element.toSelectorString).leftMap(LogEntry)
-        filteredElements  <- filterElementsByInnerText(foundElements, _.contains(prefix))
-        maxElement        <- \/.fromTryCatchNonFatal( filteredElements.maxBy(e => cutToTail(e.getText, prefix)) )
+        filteredElements  <- filterElementsByInnerText(foundElements, _.contains(substring))
+        maxElement        <- \/.fromTryCatchNonFatal( filteredElements.maxBy(e => cutToTail(e.getText, substring)) )
                                .leftMap(_ => LogEntry("Specified element not found."))
       } yield maxElement) |> handleEither(element => elementStackL.set(ElementStack(List(element))))
     }
