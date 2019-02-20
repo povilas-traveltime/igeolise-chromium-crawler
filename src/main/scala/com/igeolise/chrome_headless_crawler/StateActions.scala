@@ -3,13 +3,14 @@ package com.igeolise.chrome_headless_crawler
 import java.io.File
 
 import com.igeolise.chrome_headless_crawler.CrawlerResult.ScriptWithLog
-import com.igeolise.chrome_headless_crawler.command_parser.{Credentials, HtmlElement, In}
+import com.igeolise.chrome_headless_crawler.command_parser.{Credentials, Discriminator, HtmlElement, In}
 import com.igeolise.chrome_headless_crawler.model.{CrawlerState, ElementStack, LogEntry, ScriptState}
 import WebElementExtensions._
 import scalaz.{-\/, \/, \/-}
 import scalaz.syntax.id._
 import com.igeolise.chrome_headless_crawler.model.ComposedLenses._
 import org.apache.http.client.utils.URIBuilder
+import org.openqa.selenium.By.ByXPath
 import org.openqa.selenium.WebElement
 import scalaz.syntax.traverse._
 import scalaz.\/._
@@ -136,22 +137,39 @@ object StateActions {
       state |> scriptLogL.modify(_.append(LogEntry(s"Waiting $duration seconds.")))
     }
 
+    def findLatestByInnerText(element: HtmlElement, substring: String): CrawlerState = {
+      (for {
+        elementAndStack   <- state.scriptState.elementStack.pop
+        foundElements     <- elementAndStack._1.findElementsByXpath(element.toSelectorString).leftMap(LogEntry)
+        filteredElements  <- filterElementsByInnerText(foundElements, _.contains(substring))
+        maxElement        <- \/.fromTryCatchNonFatal( filteredElements.maxBy(e => cutToTail(e.getText, substring)) )
+                               .leftMap(_ => LogEntry("Specified element not found."))
+      } yield maxElement) |> handleEither(element => elementStackL.set(ElementStack(List(element))))
+    }
+
     def findLatestWithPrefix(prefix: String): CrawlerState = {
       (for {
         elementAndStack           <- state.scriptState.elementStack.pop
         foundElements             <- elementAndStack._1.findElementsByXpath("//a").leftMap(LogEntry)
-        filteredElements  <- filterElements(foundElements, "href", _.contains(prefix))
+        filteredElements          <- filterElements(foundElements, "href", _.contains(prefix))
         resultElement             <- \/.fromTryCatchNonFatal(filteredElements.maxBy { e => cutToTail(e.getAttribute("href"), prefix) }).leftMap(_ => LogEntry("Specified element not found."))
         download                  <- state.driver.download(() => resultElement.clickDisjunction(state.driver.driver), state.target).leftMap(LogEntry)
       } yield download) |> handleEither(addDownloadToState) _ // explicit conversion to function
     }
 
     /***
-      * Finds the last occurance of @slice and drops everything before its end (including the slice).
+      * Finds the last occurrence of @slice and drops everything before its end (including the slice).
       */
     private def cutToTail(input: String, slice: String): String = {
       val startOfPrefix = input.lastIndexOf(slice)
       input.drop(startOfPrefix).stripPrefix(slice)
+    }
+
+    private def filterElementsByInnerText(elements: Traversable[WebElement], predicate: String => Boolean): LogEntry \/ List[WebElement] = {
+      \/.fromTryCatchNonFatal(elements.filter{ e =>
+        val textValue = e.getText
+        textValue != null && predicate(textValue)
+      }.toList).leftMap(e => LogEntry(s"Error while filtering elements by inner text, message: ${e.getMessage}"))
     }
 
     private def filterElements(elements: Traversable[WebElement], attributeName: String, predicate: String => Boolean): LogEntry \/ List[WebElement] = {

@@ -4,6 +4,7 @@ object ActionParser {
   private val commandWithParam = "(\\w+) (.+)".r
   private val commandWithNumber = "(\\w+) (\\d+)".r
   private val commandWithElement = "(\\w+) (\\S+)(?> (\\S+) (\\S+))?".r
+  private val commandWithElementAndSubstring = "(\\w+) (.+) (.+)".r
   def unapply(command: String): Option[Action] = {
     command match {
       case commandWithParam("in", HtmlElementParser(element)) => Some(In(element))
@@ -25,6 +26,8 @@ object ActionParser {
         Some(FindContainingInLastResult(text))
       case commandWithNumber("waitSeconds", seconds) => Some(WaitSeconds(seconds.toInt))
       case commandWithParam("findLatestWithPrefix", prefix) => Some(FindLatestWithPrefix(prefix))
+      case commandWithElementAndSubstring("findLatestByInnerText", HtmlElementParser(element), substring) =>
+        Some(FindLatestByInnerText(element, substring))
       case _ => None
     }
   }

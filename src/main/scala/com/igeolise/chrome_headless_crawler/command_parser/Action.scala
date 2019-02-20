@@ -17,18 +17,19 @@ case class TypeIn(text: String) extends Action(typeInN) { override def toString:
 case object Click extends Action(clickN)
 case object ClickNoWait extends Action(clickNoWaitN)
 case object ClickDownload extends Action(clickDownloadN)
-case class NavigateTo(url: String) extends Action(navitateToN) { override def toString: String = s"$actionName $url" }
+case class NavigateTo(url: String) extends Action(navigateToN) { override def toString: String = s"$actionName $url" }
 case class NavigateToDownload(url: String, credentials: Option[Credentials]) extends Action(navigateToDownloadN) {
   override def toString: String = s"$actionName $url"
 }
 case object OnCurrentPage extends Action(onCurrentPageN)
 case object Up extends Action(upN)
 case class InAll(element: HtmlElement) extends Action(inAllN) with withElement
-case class FindContainingInLastResult(text: String) extends Action(findContainintInLastResultN) {
+case class FindContainingInLastResult(text: String) extends Action(findContainingInLastResultN) {
   override def toString: String = s"$actionName $text"
 }
 case class WaitSeconds(seconds: Int) extends Action(waitSecondsN)
 case class FindLatestWithPrefix(prefix: String) extends Action(findLatestWithPrefixN)
+case class FindLatestByInnerText(element: HtmlElement, substring: String) extends Action(findLatestByInnerTextN)
 
 case class Credentials(user: String, password: String)
 
@@ -39,12 +40,13 @@ object Action {
   val clickN = "click"
   val clickNoWaitN = "clickNoWait"
   val clickDownloadN = "clickDownload"
-  val navitateToN = "navigateTo"
+  val navigateToN = "navigateTo"
   val navigateToDownloadN = "navigateToDownload"
   val onCurrentPageN = "onCurrentPage"
   val upN = "up"
   val inAllN = "inAll"
-  val findContainintInLastResultN = "findContainingInLastResult"
+  val findContainingInLastResultN = "findContainingInLastResult"
   val waitSecondsN = "waitSeconds"
   val findLatestWithPrefixN = "findLatestWithPrefix"
+  val findLatestByInnerTextN = "findLatestByInnerText"
 }
