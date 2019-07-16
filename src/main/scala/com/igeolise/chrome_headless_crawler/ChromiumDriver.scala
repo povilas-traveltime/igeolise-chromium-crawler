@@ -34,7 +34,8 @@ class ChromiumDriver(chromeDriverFile: File, chromeOptions: ChromeOptions = Chro
   val (service, driver) = createDriver(chromeOptions)
 
   override def close(): Unit = {
-    driver.close()
+    driver.quit()
+    service.stop()
   }
 
   private def createDriver(options: ChromeOptions): (ChromeDriverService, ChromeDriver) = {
