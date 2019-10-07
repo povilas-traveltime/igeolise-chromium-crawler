@@ -2,7 +2,7 @@ package com.igeolise.chrome_headless_crawler
 
 import java.io.File
 import java.net.URL
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, StandardCopyOption}
 import java.util.logging.Level
 
 import com.igeolise.chrome_headless_crawler.model.LogEntry
@@ -109,8 +109,8 @@ class ChromiumDriver(chromeDriverFile: File, chromeOptions: ChromeOptions = Chro
   }
 
   private def moveFile(from: File, to: File): LogEntry \/ Unit = {
-    \/.fromTryCatchNonFatal(Files.move(from.toPath, to.toPath)).map(_ => ())
-      .leftMap(e => LogEntry(s"Failed while moving file from: ${from.getAbsolutePath} to: ${to.getAbsolutePath}\nException message: ${e.getMessage}"))
+    \/.fromTryCatchNonFatal(Files.move(from.toPath, to.toPath, StandardCopyOption.REPLACE_EXISTING)).map(_ => ())
+      .leftMap(e => LogEntry(s"Failed while moving file from: ${from.getAbsolutePath} to: ${to.getAbsolutePath}\nException message: ${e.toString}"))
   }
 
   def navigateTo(url: String) (implicit timeout: FiniteDuration): String \/ Unit = {

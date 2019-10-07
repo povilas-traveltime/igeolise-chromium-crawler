@@ -33,7 +33,7 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
       val initialState = CrawlerStateFactory.createState(
         driver,
         script,
-        downloadLocation,
+        downloadLocation.getCanonicalFile,
         timeout
       )
       val resultState = executeScripts(initialState)
