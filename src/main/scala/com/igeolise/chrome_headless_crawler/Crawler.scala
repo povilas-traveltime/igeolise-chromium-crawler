@@ -2,16 +2,16 @@ package com.igeolise.chrome_headless_crawler
 
 import java.io.File
 
+import com.igeolise.Helpers.{IdOps, TryOps}
 import com.igeolise.chrome_headless_crawler.command_parser._
 import com.igeolise.chrome_headless_crawler.model._
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{Failure, Success}
 import com.igeolise.chrome_headless_crawler.model.ComposedLenses._
-import scalaz.{-\/, \/, \/-}
-import scalaz.syntax.id._
+import com.softwaremill.quicklens._
 
-class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDuration) {
+
+class Crawler(chromeDriverFile: File, chromeFile: File, logFile: File, downloadLocation: File, timeout: FiniteDuration) {
   import CrawlerResult._
 
   @tailrec
@@ -19,17 +19,18 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
     val firstState = executeScript(state)
     firstState.unprocessedScripts match {
       case head :: tail =>
-        val stateAfterExecution = state |>
-          CrawlerState.scriptState.set(ScriptState(head, ElementStack(List.empty), LazyLog(s"Executing ${head.toString}"))) |>
-          CrawlerState.unprocessedScripts.set(tail) |>
-          executeScript
-        executeScripts(stateAfterExecution)
-      case Nil => state
+        val nextState = {
+          firstState
+            .modify(_.scriptState).setTo(ScriptState(head, ElementStack(List.empty), LazyLog(s"Executing ${head.toString}")))
+            .modify(_.unprocessedScripts).setTo(tail) |> executeScript
+        }
+        executeScripts(nextState)
+      case Nil => firstState
     }
   }
 
-  def crawl(script: Script): \/[CrawlerFailure, CrawlerResults[LazyLog, Script]] = {
-    ChromiumDriver.withDriver(chromeDriverFile) { driver =>
+  def crawl(script: Script): Either[CrawlerFailure, CrawlerResults[LazyLog, Script]] = {
+    ChromiumDriver.withDriver(chromeDriverFile, chromeFile, logFile, downloadLocation) { driver =>
       val initialState = CrawlerStateFactory.createState(
         driver,
         script,
@@ -39,10 +40,7 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
       val resultState = executeScripts(initialState)
       CrawlerResults(resultState.successes, resultState.failures)
 
-    } match {
-      case Success(result) => \/-(result)
-      case Failure(e) => -\/(CrawlerFailure(e.getMessage))
-    }
+    }.leftMap(e => CrawlerFailure(e.getMessage))
   }
 
   @tailrec
@@ -57,7 +55,7 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
 
   private def executeAction(state: CrawlerState, action: Action): CrawlerState = {
     import StateActions.StateActionsExt
-    val stateWithLog = scriptLogL.modify(_.append(LogEntry(s"Executing action '${action.toString}'"))) (state)
+    val stateWithLog = scriptLogL.using(_.append(LogEntry(s"Executing action '${action.toString}'"))) (state)
 
     (action match {
       case In(element) => stateWithLog.in(element)
@@ -74,6 +72,6 @@ class Crawler(chromeDriverFile: File, downloadLocation: File, timeout: FiniteDur
       case WaitSeconds(secs) => stateWithLog.waitSeconds(secs)
       case FindLatestWithPrefix(prefix) => stateWithLog.findLatestWithPrefix(prefix)
       case FindLatestByInnerText(element, substring) => stateWithLog.findLatestByInnerText(element, substring)
-    }) |> currentScriptL.modify(_.withNextAction)
+    }) |> currentScriptL.using(_.withNextAction)
   }
 }

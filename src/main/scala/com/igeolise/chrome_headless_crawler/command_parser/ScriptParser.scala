@@ -1,21 +1,22 @@
 package com.igeolise.chrome_headless_crawler.command_parser
 
-import scalaz.{-\/, \/, \/-}
-import scalaz.syntax.traverse._
-import scalaz.std.vector._
+import cats.syntax.traverse._
+import cats.instances.{either, vector}
+import either._, vector._
 
 object ScriptParser {
 
   case class ScriptParsingError(msg: String)
 
-  def parse(script: String): \/[ScriptParsingError, Vector[Action]] = {
+  def parse(script: String): Either[ScriptParsingError, Vector[Action]] = {
     if (script.isEmpty) {
-      -\/(ScriptParsingError("Script is empty"))
+      Left(ScriptParsingError("Script is empty"))
     } else {
-      script.split("\\\\").map {
-        case ActionParser(action) => \/-(action)
-        case s: String => -\/(ScriptParsingError(s"$s is not a valid action"))
-      }.toVector.sequenceU
+      val parsedParts = script.split("\\\\").map {
+        case ActionParser(action) => Right(action)
+        case s: String => Left(ScriptParsingError(s"$s is not a valid action"))
+      }.toVector
+      parsedParts.sequence
     }
   }
 }

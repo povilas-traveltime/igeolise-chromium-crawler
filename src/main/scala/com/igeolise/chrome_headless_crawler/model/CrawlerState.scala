@@ -4,11 +4,9 @@ import java.io.File
 
 import com.igeolise.chrome_headless_crawler.ChromiumDriver
 import com.igeolise.chrome_headless_crawler.CrawlerResult.{FileWithLog, ScriptWithLog}
-import monocle.macros.Lenses
 
 import scala.concurrent.duration.FiniteDuration
 
-@Lenses
 case class CrawlerState(
   scriptState:    ScriptState,
   target:         File,

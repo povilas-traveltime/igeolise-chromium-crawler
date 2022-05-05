@@ -1,10 +1,7 @@
 package com.igeolise.chrome_headless_crawler.model
 
-import monocle.macros.Lenses
-
 case class LogEntry(message: String)
 
-@Lenses
 case class LazyLog(header: String, log: Seq[LogEntry] = Seq.empty) {
 
   def append(message: LogEntry): LazyLog = {
